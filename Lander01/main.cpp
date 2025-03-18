@@ -8,26 +8,30 @@ static const int SCREEN_HEIGHT = 600;
 //==================================================================
 static void drawUI(Simulation& sim)
 {
+    const int fsize = 20;
     // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.lander.fuel), 10, 10, 20, WHITE);
-    DrawText(TextFormat("Speed: %.1f", sqrt(sim.lander.velocity.x*sim.lander.velocity.x + sim.lander.velocity.y*sim.lander.velocity.y)), 10, 40, 20, WHITE);
+    DrawText(TextFormat("Fuel: %.0f%%", sim.lander.fuel), 10, 10, fsize, WHITE);
+
+    const auto speed = sim.lander.CalcSpeed();
+    const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
+    DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
 
     // Draw game state message
     if (sim.lander.state == GameState::LANDED)
     {
-        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, 30, GREEN);
-        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, 20, WHITE);
+        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
+        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
     else if (sim.lander.state == GameState::CRASHED)
     {
-        DrawText("CRASHED!", SCREEN_WIDTH/2 - 80, 200, 30, RED);
-        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, 20, WHITE);
+        DrawText("CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
+        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
     else
     {
         DrawText("UP: Vertical thrust, LEFT/RIGHT: Lateral thrusters",
             SCREEN_WIDTH - 600, 10,
-            20, WHITE);
+            fsize, WHITE);
     }
 }
 

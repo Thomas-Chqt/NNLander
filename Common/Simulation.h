@@ -87,6 +87,11 @@ public:
         if (position.y < 0) position.y = 0;
     }
 
+    float CalcSpeed()
+    {
+        return sqrt(velocity.x*velocity.x + velocity.y*velocity.y);
+    }
+
     void DrawLander()
     {
         // Draw lander
@@ -167,11 +172,7 @@ public:
             lander.position.x <= position.x + width/2)
         {
             // Check landing speed
-            const auto vx = lander.velocity.x;
-            const auto vy = lander.velocity.y;
-            const auto speed = sqrt(vx*vx + vy*vy);
-
-            if (speed <= sp.LANDING_SAFE_SPEED)
+            if (lander.CalcSpeed() <= sp.LANDING_SAFE_SPEED)
                 lander.state = LANDED; // Successful landing
             else
                 lander.state = CRASHED; // Crash
