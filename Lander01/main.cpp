@@ -82,7 +82,7 @@ int main()
         rlDisableBackfaceCulling(); // Don't care about triangles winding order
 
         // Draw the simulation
-        sim.DrawSim();
+        DrawSim(sim);
 
         // Draw UI
         drawUI(sim);
