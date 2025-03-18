@@ -22,5 +22,8 @@ if (NOT raylib_FOUND)
     FetchContent_MakeAvailable(raylib)
 endif()
 
+# Add the common headers directory
+include_directories(Common)
+
 # Add subdirectories for each lander demo
 add_subdirectory(Lander01)
