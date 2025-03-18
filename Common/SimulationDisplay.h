@@ -1,3 +1,6 @@
+#ifndef SIMULATION_DISPLAY_H
+#define SIMULATION_DISPLAY_H
+
 #include "raylib.h"
 #include "Simulation.h"
 
@@ -9,8 +12,8 @@ inline void DrawLander(const Lander& lander)
 {
     // Draw lander
     Color landerColor = WHITE;
-    if (state == LANDED) landerColor = GREEN;
-    if (state == CRASHED) landerColor = RED;
+    if (lander.state == LANDED) landerColor = GREEN;
+    if (lander.state == CRASHED) landerColor = RED;
 
     const auto drawX = lander.mPos.x;
     const auto drawY = lander.mPos.y - 20;
@@ -23,7 +26,7 @@ inline void DrawLander(const Lander& lander)
     DrawLine(drawX + 15, drawY + 15, drawX + 25, drawY + 25, landerColor);
 
     // Do not draw flame triangles if lander is not playing or out of fuel
-    if (lander.state != PLAYING || lander.fuel <= 0) return;
+    if (lander.state != PLAYING || lander.mFuel <= 0) return;
 
     // Bottom thruster (UP key)
     if (lander.mIsThrustUpActive)
@@ -80,7 +83,7 @@ inline void DrawTerrain(const Terrain& terrain)
 {
     const auto& pts = terrain.mPoints;
     const auto& sp = terrain.sp;
-    for (int i=0; i < SEGMENTS_N; ++i)
+    for (size_t i=0; i < Terrain::SEGMENTS_N; ++i)
     {
         DrawLineEx(pts[i], pts[i + 1], 2.0f, DARKBROWN);
         // Fill terrain below
@@ -104,6 +107,7 @@ inline void DrawSim(const Simulation& sim)
     DrawLandingPad(sim.landingPad);
 
     // Draw lander
-    DrawLander(sim.lander);
+    DrawLander(sim.mLander);
 }
 
+#endif

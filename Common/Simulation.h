@@ -1,3 +1,6 @@
+#ifndef SIMULATION_H
+#define SIMULATION_H
+
 #include "raylib.h"
 #include <cmath>
 #include <string>
@@ -137,6 +140,7 @@ public:
 //==================================================================
 class Terrain
 {
+public:
     SimParams sp;
 public:
     static const size_t SEGMENTS_N = 10;
@@ -201,13 +205,13 @@ class Simulation
 {
 public:
     SimParams sp;
-    Lander lander;
+    Lander mLander;
     LandingPad landingPad;
     Terrain terrain;
 
     Simulation(const SimParams& sp)
         : sp(sp)
-        , lander(sp, Vector2{sp.SCREEN_WIDTH / 2.0f, sp.SCREEN_HEIGHT / 4.0f})
+        , mLander(sp, Vector2{sp.SCREEN_WIDTH / 2.0f, sp.SCREEN_HEIGHT / 4.0f})
         , landingPad(sp)
         , terrain(sp, landingPad)
     {
@@ -216,15 +220,16 @@ public:
     void AnimateSim()
     {
         // Only animate if the lander is active
-        if (lander.state != PLAYING)
+        if (mLander.state != PLAYING)
             return;
 
         // Update lander
-        lander.AnimLander();
+        mLander.AnimLander();
         // Check for landing
-        landingPad.CheckPadLanding(lander);
+        landingPad.CheckPadLanding(mLander);
         // Check for terrain collision
-        terrain.CheckTerrainCollision(lander);
+        terrain.CheckTerrainCollision(mLander);
     }
 };
 
+#endif

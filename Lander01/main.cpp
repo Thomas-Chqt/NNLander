@@ -1,4 +1,7 @@
+#include "raylib.h"
+#include "rlgl.h"
 #include "Simulation.h"
+#include "SimulationDisplay.h"
 
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
@@ -10,19 +13,19 @@ static void drawUI(Simulation& sim)
 {
     const int fsize = 20;
     // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.lander.mFuel), 10, 10, fsize, WHITE);
+    DrawText(TextFormat("Fuel: %.0f%%", sim.mLander.mFuel), 10, 10, fsize, WHITE);
 
-    const auto speed = sim.lander.CalcSpeed();
+    const auto speed = sim.mLander.CalcSpeed();
     const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
     DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
 
     // Draw game state message
-    if (sim.lander.state == GameState::LANDED)
+    if (sim.mLander.state == GameState::LANDED)
     {
         DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
         DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
-    else if (sim.lander.state == GameState::CRASHED)
+    else if (sim.mLander.state == GameState::CRASHED)
     {
         DrawText("CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
         DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
@@ -55,12 +58,12 @@ int main()
     while (!WindowShouldClose())
     {
         // Update
-        if (sim.lander.state == GameState::PLAYING)
+        if (sim.mLander.state == GameState::PLAYING)
         {
             // Handle input
-            sim.lander.mIsThustUpActive = IsKeyDown(KEY_UP);
-            sim.lander.mIsThrustLeftActive = IsKeyDown(KEY_LEFT);
-            sim.lander.mIsThrustRightActive = IsKeyDown(KEY_RIGHT);
+            sim.mLander.mIsThrustUpActive = IsKeyDown(KEY_UP);
+            sim.mLander.mIsThrustLeftActive = IsKeyDown(KEY_LEFT);
+            sim.mLander.mIsThrustRightActive = IsKeyDown(KEY_RIGHT);
 
             // Animate the simulation
             sim.AnimateSim();
