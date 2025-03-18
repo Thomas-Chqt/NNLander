@@ -22,9 +22,9 @@ public:
 };
 
 //==================================================================
-// Game states
+// The possible states of the simulation
 //==================================================================
-enum GameState { PLAYING, LANDED, CRASHED };
+enum SimState { STATE_ACTIVE, STATE_LANDED, STATE_CRASHED };
 
 //==================================================================
 // Lander class
@@ -35,11 +35,11 @@ class Lander
 public:
     Vector2 mPos { 0.0f, 0.0f };
     Vector2 mVel { 0.0f, 0.0f };
-    float mFuel = 100.0f;
-    bool mIsThrustUpActive = false;
-    bool mIsThrustLeftActive = false;
-    bool mIsThrustRightActive = false;
-    GameState state = PLAYING;
+    float   mFuel = 100.0f;
+    bool    mIsThrustUpActive = false;
+    bool    mIsThrustLeftActive = false;
+    bool    mIsThrustRightActive = false;
+    SimState mState = STATE_ACTIVE;
 
     Lander(const SimParams& sp, const Vector2& pos)
         : sp(sp)
@@ -48,7 +48,7 @@ public:
 
     void AnimLander()
     {
-        if (state != PLAYING) return;
+        if (mState != STATE_ACTIVE) return;
 
         // Apply gravity
         mVel.y += sp.GRAVITY;
@@ -103,7 +103,7 @@ class LandingPad
     SimParams sp;
 public:
     Vector2 mPos {0.0f, 0.0f};
-    float mPadWidth = 100.0f;
+    float   mPadWidth = 100.0f;
 
     LandingPad(const SimParams& sp)
         : sp(sp)
@@ -125,9 +125,9 @@ public:
         {
             // Check landing speed
             if (lander.CalcSpeed() <= sp.LANDING_SAFE_SPEED)
-                lander.state = LANDED; // Successful landing
+                lander.mState = STATE_LANDED; // Successful landing
             else
-                lander.state = CRASHED; // Crash
+                lander.mState = STATE_CRASHED; // Crash
 
             return true; // Done
         }
@@ -185,12 +185,12 @@ public:
     // (sets lander state appropriately)
     bool CheckTerrainCollision(Lander& lander)
     {
-        if (lander.state != PLAYING)
+        if (lander.mState != STATE_ACTIVE)
             return false;
 
         if (lander.mPos.y >= mGroundY)
         {
-            lander.state = CRASHED;
+            lander.mState = STATE_CRASHED;
             return true;
         }
 
@@ -204,31 +204,28 @@ public:
 class Simulation
 {
 public:
-    SimParams sp;
-    Lander mLander;
-    LandingPad landingPad;
-    Terrain terrain;
+    SimParams   sp;
+    Lander      mLander;
+    LandingPad  mLandingPad;
+    Terrain     mTerrain;
 
     Simulation(const SimParams& sp)
         : sp(sp)
         , mLander(sp, Vector2{sp.SCREEN_WIDTH / 2.0f, sp.SCREEN_HEIGHT / 4.0f})
-        , landingPad(sp)
-        , terrain(sp, landingPad)
+        , mLandingPad(sp)
+        , mTerrain(sp, mLandingPad)
     {
     }
 
     void AnimateSim()
     {
         // Only animate if the lander is active
-        if (mLander.state != PLAYING)
+        if (mLander.mState != STATE_ACTIVE)
             return;
 
-        // Update lander
-        mLander.AnimLander();
-        // Check for landing
-        landingPad.CheckPadLanding(mLander);
-        // Check for terrain collision
-        terrain.CheckTerrainCollision(mLander);
+        mLander.AnimLander(); // Update lander
+        mLandingPad.CheckPadLanding(mLander); // Check for landing
+        mTerrain.CheckTerrainCollision(mLander); // Check for terrain collision
     }
 };
 

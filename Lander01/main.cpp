@@ -20,14 +20,14 @@ static void drawUI(Simulation& sim)
     DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
 
     // Draw game state message
-    if (sim.mLander.state == GameState::LANDED)
+    if (sim.mLander.mState == SimState::STATE_LANDED)
     {
         DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
         DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
-    else if (sim.mLander.state == GameState::CRASHED)
+    else if (sim.mLander.mState == SimState::STATE_CRASHED)
     {
-        DrawText("CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
+        DrawText("STATE_CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
         DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
     else
@@ -58,7 +58,7 @@ int main()
     while (!WindowShouldClose())
     {
         // Update
-        if (sim.mLander.state == GameState::PLAYING)
+        if (sim.mLander.mState == SimState::STATE_ACTIVE)
         {
             // Handle input
             sim.mLander.mIsThrustUpActive = IsKeyDown(KEY_UP);
@@ -78,11 +78,13 @@ int main()
             }
         }
 
-        // Drawing
+        // Begin drawing
         BeginDrawing();
+
         ClearBackground(BLACK);
 
-        rlDisableBackfaceCulling(); // Don't care about triangles winding order
+        // Allow any triangle to be drawn regardless of winding order
+        rlDisableBackfaceCulling();
 
         // Draw the simulation
         DrawSim(sim);

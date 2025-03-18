@@ -10,10 +10,9 @@
 //==================================================================
 inline void DrawLander(const Lander& lander)
 {
-    // Draw lander
     Color landerColor = WHITE;
-    if (lander.state == LANDED) landerColor = GREEN;
-    if (lander.state == CRASHED) landerColor = RED;
+    if (lander.mState == STATE_LANDED) landerColor = GREEN;
+    if (lander.mState == STATE_CRASHED) landerColor = RED;
 
     const auto drawX = lander.mPos.x;
     const auto drawY = lander.mPos.y - 20;
@@ -26,7 +25,7 @@ inline void DrawLander(const Lander& lander)
     DrawLine(drawX + 15, drawY + 15, drawX + 25, drawY + 25, landerColor);
 
     // Do not draw flame triangles if lander is not playing or out of fuel
-    if (lander.state != PLAYING || lander.mFuel <= 0) return;
+    if (lander.mState != STATE_ACTIVE || lander.mFuel <= 0) return;
 
     // Bottom thruster (UP key)
     if (lander.mIsThrustUpActive)
@@ -100,14 +99,9 @@ inline void DrawTerrain(const Terrain& terrain)
 //==================================================================
 inline void DrawSim(const Simulation& sim)
 {
-    // Draw terrain
-    DrawTerrain(sim.terrain);
-
-    // Draw landing pad
-    DrawLandingPad(sim.landingPad);
-
-    // Draw lander
-    DrawLander(sim.mLander);
+    DrawTerrain(sim.mTerrain); // Draw terrain
+    DrawLandingPad(sim.mLandingPad); // Draw landing pad
+    DrawLander(sim.mLander); // Draw lander
 }
 
 #endif
