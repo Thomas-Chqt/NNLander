@@ -12,8 +12,8 @@ inline void DrawLander(const Lander& lander)
     if (state == LANDED) landerColor = GREEN;
     if (state == CRASHED) landerColor = RED;
 
-    const auto drawX = lander.position.x;
-    const auto drawY = lander.position.y - 20;
+    const auto drawX = lander.mPos.x;
+    const auto drawY = lander.mPos.y - 20;
 
     // Main body
     DrawRectangle(drawX - 15, drawY - 15, 30, 30, landerColor);
@@ -26,7 +26,7 @@ inline void DrawLander(const Lander& lander)
     if (lander.state != PLAYING || lander.fuel <= 0) return;
 
     // Bottom thruster (UP key)
-    if (lander.thrustingUp)
+    if (lander.mIsThrustUpActive)
     {
         DrawTriangle(
             {drawX - 8, drawY + 15},
@@ -37,7 +37,7 @@ inline void DrawLander(const Lander& lander)
     }
 
     // Right thruster (LEFT key)
-    if (lander.thrustingLeft)
+    if (lander.mIsThrustLeftActive)
     {
         DrawTriangle(
             {drawX + 15, drawY - 8},
@@ -48,7 +48,7 @@ inline void DrawLander(const Lander& lander)
     }
 
     // Left thruster (RIGHT key)
-    if (lander.thrustingRight)
+    if (lander.mIsThrustRightActive)
     {
         DrawTriangle(
             {drawX - 15, drawY - 8},
@@ -62,9 +62,9 @@ inline void DrawLander(const Lander& lander)
 //==================================================================
 inline void DrawLandingPad(const LandingPad& pad)
 {
-    const auto px = pad.position.x;
-    const auto py = pad.position.y;
-    const auto w = pad.width;
+    const auto px = pad.mPos.x;
+    const auto py = pad.mPos.y;
+    const auto w = pad.mPadWidth;
     DrawRectangle(px - w/2, py, w, 10, GREEN);
 
     // Draw landing lights
@@ -78,7 +78,7 @@ inline void DrawLandingPad(const LandingPad& pad)
 //==================================================================
 inline void DrawTerrain(const Terrain& terrain)
 {
-    const auto& pts = terrain.points;
+    const auto& pts = terrain.mPoints;
     const auto& sp = terrain.sp;
     for (int i=0; i < SEGMENTS_N; ++i)
     {

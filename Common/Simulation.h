@@ -30,17 +30,17 @@ class Lander
 {
     SimParams sp;
 public:
-    Vector2 position { 0.0f, 0.0f };
-    Vector2 velocity { 0.0f, 0.0f };
-    float fuel = 100.0f;
-    bool thrustingUp = false;
-    bool thrustingLeft = false;
-    bool thrustingRight = false;
+    Vector2 mPos { 0.0f, 0.0f };
+    Vector2 mVel { 0.0f, 0.0f };
+    float mFuel = 100.0f;
+    bool mIsThrustUpActive = false;
+    bool mIsThrustLeftActive = false;
+    bool mIsThrustRightActive = false;
     GameState state = PLAYING;
 
     Lander(const SimParams& sp, const Vector2& pos)
         : sp(sp)
-        , position(pos)
+        , mPos(pos)
     {}
 
     void AnimLander()
@@ -48,47 +48,47 @@ public:
         if (state != PLAYING) return;
 
         // Apply gravity
-        velocity.y += sp.GRAVITY;
+        mVel.y += sp.GRAVITY;
 
         // Apply vertical thrust
-        if (fuel > 0)
+        if (mFuel > 0)
         {
-            if (thrustingUp) // Vertical thrust
+            if (mIsThrustUpActive) // Vertical thrust
             {
-                velocity.y -= sp.VERTICAL_THRUST_POWER;
-                fuel -= 0.5f; // Consume fuel
+                mVel.y -= sp.VERTICAL_THRUST_POWER;
+                mFuel -= 0.5f; // Consume fuel
             }
 
-            if (thrustingLeft) // Lateral thrusts
+            if (mIsThrustLeftActive) // Lateral thrusts
             {
-                velocity.x -= sp.LATERAL_THRUST_POWER;
-                fuel -= 0.3f; // Consume fuel
+                mVel.x -= sp.LATERAL_THRUST_POWER;
+                mFuel -= 0.3f; // Consume fuel
             }
 
-            if (thrustingRight) // Lateral thrusts
+            if (mIsThrustRightActive) // Lateral thrusts
             {
-                velocity.x += sp.LATERAL_THRUST_POWER;
-                fuel -= 0.3f; // Consume fuel
+                mVel.x += sp.LATERAL_THRUST_POWER;
+                mFuel -= 0.3f; // Consume fuel
             }
         }
 
         // Ensure fuel doesn't go negative
-        if (fuel < 0) fuel = 0;
+        if (mFuel < 0) mFuel = 0;
 
         // Update position
-        position.x += velocity.x;
-        position.y += velocity.y;
+        mPos.x += mVel.x;
+        mPos.y += mVel.y;
 
         // Limit lander to screen edges
-        position.x = std::clamp(position.x, 0.0f, (float)sp.SCREEN_WIDTH);
+        mPos.x = std::clamp(mPos.x, 0.0f, (float)sp.SCREEN_WIDTH);
 
         // Check bounds for y-axis
-        if (position.y < 0) position.y = 0;
+        if (mPos.y < 0) mPos.y = 0;
     }
 
     float CalcSpeed()
     {
-        return sqrt(velocity.x*velocity.x + velocity.y*velocity.y);
+        return sqrt(mVel.x*mVel.x + mVel.y*mVel.y);
     }
 };
 
@@ -99,26 +99,26 @@ class LandingPad
 {
     SimParams sp;
 public:
-    Vector2 position {0.0f, 0.0f};
-    float width = 100.0f;
+    Vector2 mPos {0.0f, 0.0f};
+    float mPadWidth = 100.0f;
 
     LandingPad(const SimParams& sp)
         : sp(sp)
     {
-        position.x = GetRandomValue(width, sp.SCREEN_WIDTH - width);
-        position.y = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
+        mPos.x = GetRandomValue(mPadWidth, sp.SCREEN_WIDTH - mPadWidth);
+        mPos.y = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
     }
 
     // See if it's in the pad area and if it landed or crashed
     // (sets lander state appropriately)
     bool CheckPadLanding(Lander& lander)
     {
-        const auto landerX = lander.position.x;
-        const auto landerY = lander.position.y;
+        const auto landerX = lander.mPos.x;
+        const auto landerY = lander.mPos.y;
         // Check if lander is within landing pad bounds
-        if (landerY >= position.y &&
-            landerX >= position.x - width/2 &&
-            landerX <= position.x + width/2)
+        if (landerY >= mPos.y &&
+            landerX >= mPos.x - mPadWidth/2 &&
+            landerX <= mPos.x + mPadWidth/2)
         {
             // Check landing speed
             if (lander.CalcSpeed() <= sp.LANDING_SAFE_SPEED)
@@ -139,40 +139,40 @@ class Terrain
 {
     SimParams sp;
 public:
-    static const int SEGMENTS_N = 10;
-    Vector2 points[SEGMENTS_N + 1];
+    static const size_t SEGMENTS_N = 10;
+    Vector2 mPoints[SEGMENTS_N + 1];
 
-    float groundY = 0;
+    float mGroundY = 0;
 
     Terrain(const SimParams& sp, LandingPad& pad)
         : sp(sp)
     {
-        groundY = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
+        mGroundY = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
 
         float segmentWidth = sp.SCREEN_WIDTH / SEGMENTS_N;
 
-        for (int i=0; i <= SEGMENTS_N; ++i)
+        for (size_t i=0; i <= SEGMENTS_N; ++i)
         {
-            points[i].x = i * segmentWidth;
+            mPoints[i].x = i * segmentWidth;
 
             // Find landing pad segment
-            float padLeftX = pad.position.x - pad.width/2;
-            float padRightX = pad.position.x + pad.width/2;
+            float padLeftX = pad.mPos.x - pad.mPadWidth/2;
+            float padRightX = pad.mPos.x + pad.mPadWidth/2;
 
             const auto isLandingPadArea =
-                points[i].x >= padLeftX - segmentWidth &&
-                points[i].x <= padRightX + segmentWidth;
+                mPoints[i].x >= padLeftX - segmentWidth &&
+                mPoints[i].x <= padRightX + segmentWidth;
 
             if (isLandingPadArea)
             {
                 // Make flat area for landing pad
-                points[i].y = pad.position.y;
+                mPoints[i].y = pad.mPos.y;
             }
             else
             {
                 // Very gentle height variation for terrain
                 // Only small variations from the ground level
-                points[i].y = groundY + GetRandomValue(-10, 10);
+                mPoints[i].y = mGroundY + GetRandomValue(-10, 10);
             }
         }
     }
@@ -184,7 +184,7 @@ public:
         if (lander.state != PLAYING)
             return false;
 
-        if (lander.position.y >= groundY)
+        if (lander.mPos.y >= mGroundY)
         {
             lander.state = CRASHED;
             return true;

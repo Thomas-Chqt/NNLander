@@ -10,7 +10,7 @@ static void drawUI(Simulation& sim)
 {
     const int fsize = 20;
     // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.lander.fuel), 10, 10, fsize, WHITE);
+    DrawText(TextFormat("Fuel: %.0f%%", sim.lander.mFuel), 10, 10, fsize, WHITE);
 
     const auto speed = sim.lander.CalcSpeed();
     const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
@@ -58,9 +58,9 @@ int main()
         if (sim.lander.state == GameState::PLAYING)
         {
             // Handle input
-            sim.lander.thrustingUp = IsKeyDown(KEY_UP);
-            sim.lander.thrustingLeft = IsKeyDown(KEY_LEFT);
-            sim.lander.thrustingRight = IsKeyDown(KEY_RIGHT);
+            sim.lander.mIsThustUpActive = IsKeyDown(KEY_UP);
+            sim.lander.mIsThrustLeftActive = IsKeyDown(KEY_LEFT);
+            sim.lander.mIsThrustRightActive = IsKeyDown(KEY_RIGHT);
 
             // Animate the simulation
             sim.AnimateSim();
