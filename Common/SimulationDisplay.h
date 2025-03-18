@@ -11,8 +11,8 @@
 inline void DrawLander(const Lander& lander)
 {
     Color landerColor = WHITE;
-    if (lander.mState == STATE_LANDED) landerColor = GREEN;
-    if (lander.mState == STATE_CRASHED) landerColor = RED;
+    if (lander.mStateIsLanded) landerColor = GREEN;
+    if (lander.mStateIsCrashed) landerColor = RED;
 
     const auto drawX = lander.mPos.x;
     const auto drawY = lander.mPos.y - 20;
@@ -24,11 +24,12 @@ inline void DrawLander(const Lander& lander)
     DrawLine(drawX - 15, drawY + 15, drawX - 25, drawY + 25, landerColor);
     DrawLine(drawX + 15, drawY + 15, drawX + 25, drawY + 25, landerColor);
 
-    // Do not draw flame triangles if lander is not playing or out of fuel
-    if (lander.mState != STATE_ACTIVE || lander.mFuel <= 0) return;
+    // Do not draw flames if lander is crashed or landed or out of fuel
+    if (lander.mStateIsCrashed || lander.mStateIsLanded || lander.mFuel <= 0)
+        return;
 
-    // Bottom thruster (UP key)
-    if (lander.mIsThrustUpActive)
+    // Display a little flame if the thruster is on
+    if (lander.mControl_UpThrust)
     {
         DrawTriangle(
             {drawX - 8, drawY + 15},
@@ -38,8 +39,8 @@ inline void DrawLander(const Lander& lander)
         );
     }
 
-    // Right thruster (LEFT key)
-    if (lander.mIsThrustLeftActive)
+    // Display a little flame if the thruster is on
+    if (lander.mControl_LeftThrust)
     {
         DrawTriangle(
             {drawX + 15, drawY - 8},
@@ -49,8 +50,8 @@ inline void DrawLander(const Lander& lander)
         );
     }
 
-    // Left thruster (RIGHT key)
-    if (lander.mIsThrustRightActive)
+    // Display a little flame if the thruster is on
+    if (lander.mControl_RightThrust)
     {
         DrawTriangle(
             {drawX - 15, drawY - 8},

@@ -6,37 +6,32 @@
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
 
+static void drawUI(Simulation& sim);
+
 //==================================================================
-// Draw UI
+// UserBrain is an interface between the user and the simulation
 //==================================================================
-static void drawUI(Simulation& sim)
+class UserBrain : public SimBrainBase
 {
-    const int fsize = 20;
-    // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.mLander.mFuel), 10, 10, fsize, WHITE);
+public:
+    UserBrain() {}
 
-    const auto speed = sim.mLander.CalcSpeed();
-    const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
-    DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
+    ActionArray GetBrainActions(const StateArray& in_simState) override
+    {
+        // We ignore the input state here, because it's up to the user
+        // to see the simulation on screen and decide what to do
+        (void)in_simState;
 
-    // Draw game state message
-    if (sim.mLander.mState == SimState::STATE_LANDED)
-    {
-        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
-        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        // Set the actions based on the user input
+        ActionArray out_actions;
+        out_actions[ACTION_UP]    = (float)IsKeyDown(KEY_UP);
+        out_actions[ACTION_LEFT]  = (float)IsKeyDown(KEY_LEFT);
+        out_actions[ACTION_RIGHT] = (float)IsKeyDown(KEY_RIGHT);
+
+        // Return the actions to the simulation
+        return out_actions;
     }
-    else if (sim.mLander.mState == SimState::STATE_CRASHED)
-    {
-        DrawText("STATE_CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
-        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
-    }
-    else
-    {
-        DrawText("UP: Vertical thrust, LEFT/RIGHT: Lateral thrusters",
-            SCREEN_WIDTH - 600, 10,
-            fsize, WHITE);
-    }
-}
+};
 
 //==================================================================
 // Main function
@@ -51,44 +46,41 @@ int main()
     SimParams sp;
     sp.SCREEN_WIDTH = (float)SCREEN_WIDTH;
     sp.SCREEN_HEIGHT = (float)SCREEN_HEIGHT;
-    // Create the simulation object
+
+    // Create the simulation object with the parameters
     Simulation sim(sp);
+
+    // Create the user brain
+    // This an interface with the user, which operates controls
+    // with the keyboard
+    UserBrain userBrain;
 
     // Main game loop
     while (!WindowShouldClose())
     {
-        // Update
-        if (sim.mLander.mState == SimState::STATE_ACTIVE)
+        // Update if it is not crashed or landed
+        if (sim.mLander.mStateIsCrashed == false &&
+            sim.mLander.mStateIsLanded == false)
         {
-            // Handle input
-            sim.mLander.mIsThrustUpActive = IsKeyDown(KEY_UP);
-            sim.mLander.mIsThrustLeftActive = IsKeyDown(KEY_LEFT);
-            sim.mLander.mIsThrustRightActive = IsKeyDown(KEY_RIGHT);
-
-            // Animate the simulation
-            sim.AnimateSim();
+            // Animate the simulation with the user brain
+            sim.AnimateSim(userBrain);
         }
         else
         {
             // Restart game on Space key
             if (IsKeyPressed(KEY_SPACE))
-            {
-                // Reset the simulation
-                sim = Simulation(sp);
-            }
+                sim = Simulation(sp); // Reset the simulation
         }
 
         // Begin drawing
         BeginDrawing();
 
         ClearBackground(BLACK);
-
         // Allow any triangle to be drawn regardless of winding order
         rlDisableBackfaceCulling();
 
         // Draw the simulation
         DrawSim(sim);
-
         // Draw UI
         drawUI(sim);
 
@@ -98,3 +90,34 @@ int main()
     CloseWindow();
     return 0;
 }
+
+//==================================================================
+static void drawUI(Simulation& sim)
+{
+    const int fsize = 20;
+    // Draw info
+    DrawText(TextFormat("Fuel: %.0f%%", sim.mLander.mFuel), 10, 10, fsize, WHITE);
+
+    const auto speed = sim.mLander.CalcSpeed();
+    const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
+    DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
+
+    // Draw game state message
+    if (sim.mLander.mStateIsLanded)
+    {
+        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
+        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+    }
+    else if (sim.mLander.mStateIsCrashed)
+    {
+        DrawText("STATE_CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
+        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+    }
+    else
+    {
+        DrawText("UP: Vertical thrust, LEFT/RIGHT: Lateral thrusters",
+            SCREEN_WIDTH - 600, 10,
+            fsize, WHITE);
+    }
+}
+

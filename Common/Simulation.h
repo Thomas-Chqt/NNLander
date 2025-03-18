@@ -4,10 +4,11 @@
 #include "raylib.h"
 #include <cmath>
 #include <string>
+#include <array>
 #include <algorithm>
 
 //==================================================================
-// Simulation parameters
+// General simulation parameters (screen size, gravity, etc.)
 //==================================================================
 class SimParams
 {
@@ -22,9 +23,48 @@ public:
 };
 
 //==================================================================
-// The possible states of the simulation
+// Brain-to-simulation interface.
+// For this interface we work with arrays of floats.
+// This is a generalization that fits well with neural networks.
 //==================================================================
-enum SimState { STATE_ACTIVE, STATE_LANDED, STATE_CRASHED };
+class SimBrainBase
+{
+public:
+    // Indices of states in the simulation state array
+    enum
+    {
+        SIM_STATE_LANDER_X = 0,
+        SIM_STATE_LANDER_Y,
+        SIM_STATE_LANDER_VX,
+        SIM_STATE_LANDER_VY,
+        SIM_STATE_LANDER_FUEL,
+        SIM_STATE_LANDER_STATE_LANDED,
+        SIM_STATE_LANDER_STATE_CRASHED,
+        SIM_STATE_PAD_X,
+        SIM_STATE_PAD_Y,
+        SIM_STATE_PAD_WIDTH,
+        SIM_STATE_N
+    };
+
+    // Indices of actions from the brain
+    enum
+    {
+        ACTION_UP = 0,
+        ACTION_LEFT,
+        ACTION_RIGHT,
+        ACTION_N
+    };
+
+    // The array type for the simulation state
+    using StateArray = std::array<float, SIM_STATE_N>;
+    // The array type for the brain response
+    using ActionArray = std::array<float, ACTION_N>;
+
+    SimBrainBase() {}
+    virtual ~SimBrainBase() = default;
+
+    virtual ActionArray GetBrainActions(const StateArray& in_simState) = 0;
+};
 
 //==================================================================
 // Lander class
@@ -33,13 +73,18 @@ class Lander
 {
     SimParams sp;
 public:
-    Vector2 mPos { 0.0f, 0.0f };
-    Vector2 mVel { 0.0f, 0.0f };
+    // These are the controls to apply to the lander
+    // They may come from the user or from an artificial brain
+    bool    mControl_UpThrust = false;
+    bool    mControl_LeftThrust = false;
+    bool    mControl_RightThrust = false;
+
+    // These are the state variables of the lander
+    Vector2 mPos {0.0f, 0.0f};
+    Vector2 mVel {0.0f, 0.0f};
     float   mFuel = 100.0f;
-    bool    mIsThrustUpActive = false;
-    bool    mIsThrustLeftActive = false;
-    bool    mIsThrustRightActive = false;
-    SimState mState = STATE_ACTIVE;
+    bool    mStateIsLanded = false;
+    bool    mStateIsCrashed = false;
 
     Lander(const SimParams& sp, const Vector2& pos)
         : sp(sp)
@@ -48,7 +93,9 @@ public:
 
     void AnimLander()
     {
-        if (mState != STATE_ACTIVE) return;
+        // Do not animate if lander is crashed or landed
+        if (mStateIsCrashed || mStateIsLanded)
+            return;
 
         // Apply gravity
         mVel.y += sp.GRAVITY;
@@ -56,19 +103,19 @@ public:
         // Apply vertical thrust
         if (mFuel > 0)
         {
-            if (mIsThrustUpActive) // Vertical thrust
+            if (mControl_UpThrust) // Vertical thrust
             {
                 mVel.y -= sp.VERTICAL_THRUST_POWER;
                 mFuel -= 0.5f; // Consume fuel
             }
 
-            if (mIsThrustLeftActive) // Lateral thrusts
+            if (mControl_LeftThrust) // Lateral thrusts
             {
                 mVel.x -= sp.LATERAL_THRUST_POWER;
                 mFuel -= 0.3f; // Consume fuel
             }
 
-            if (mIsThrustRightActive) // Lateral thrusts
+            if (mControl_RightThrust) // Lateral thrusts
             {
                 mVel.x += sp.LATERAL_THRUST_POWER;
                 mFuel -= 0.3f; // Consume fuel
@@ -125,9 +172,9 @@ public:
         {
             // Check landing speed
             if (lander.CalcSpeed() <= sp.LANDING_SAFE_SPEED)
-                lander.mState = STATE_LANDED; // Successful landing
+                lander.mStateIsLanded = true; // Landed
             else
-                lander.mState = STATE_CRASHED; // Crash
+                lander.mStateIsCrashed = true; // Crashed
 
             return true; // Done
         }
@@ -185,12 +232,12 @@ public:
     // (sets lander state appropriately)
     bool CheckTerrainCollision(Lander& lander)
     {
-        if (lander.mState != STATE_ACTIVE)
+        if (lander.mStateIsCrashed || lander.mStateIsLanded)
             return false;
 
         if (lander.mPos.y >= mGroundY)
         {
-            lander.mState = STATE_CRASHED;
+            lander.mStateIsCrashed = true;
             return true;
         }
 
@@ -217,11 +264,32 @@ public:
     {
     }
 
-    void AnimateSim()
+    void AnimateSim(SimBrainBase& brain)
     {
-        // Only animate if the lander is active
-        if (mLander.mState != STATE_ACTIVE)
+        // Skip the simulation if lander is not active
+        if (mLander.mStateIsCrashed || mLander.mStateIsLanded)
             return;
+
+        // 1. Convert the simulation variables to a simple/flat array for the brain input
+        SimBrainBase::StateArray simState;
+        simState[SimBrainBase::SIM_STATE_LANDER_X] = mLander.mPos.x;
+        simState[SimBrainBase::SIM_STATE_LANDER_Y] = mLander.mPos.y;
+        simState[SimBrainBase::SIM_STATE_LANDER_VX] = mLander.mVel.x;
+        simState[SimBrainBase::SIM_STATE_LANDER_VY] = mLander.mVel.y;
+        simState[SimBrainBase::SIM_STATE_LANDER_FUEL] = mLander.mFuel;
+        simState[SimBrainBase::SIM_STATE_LANDER_STATE_LANDED] = mLander.mStateIsLanded;
+        simState[SimBrainBase::SIM_STATE_LANDER_STATE_CRASHED] = mLander.mStateIsCrashed;
+        simState[SimBrainBase::SIM_STATE_PAD_X] = mLandingPad.mPos.x;
+        simState[SimBrainBase::SIM_STATE_PAD_Y] = mLandingPad.mPos.y;
+        simState[SimBrainBase::SIM_STATE_PAD_WIDTH] = mLandingPad.mPadWidth;
+
+        // 2. Get the brain actions
+        const auto actions = brain.GetBrainActions(simState);
+
+        // 3. Convert the brain actions to the simulation variables
+        mLander.mControl_UpThrust = actions[SimBrainBase::ACTION_UP] > 0.5f;
+        mLander.mControl_LeftThrust = actions[SimBrainBase::ACTION_LEFT] > 0.5f;
+        mLander.mControl_RightThrust = actions[SimBrainBase::ACTION_RIGHT] > 0.5f;
 
         mLander.AnimLander(); // Update lander
         mLandingPad.CheckPadLanding(mLander); // Check for landing
