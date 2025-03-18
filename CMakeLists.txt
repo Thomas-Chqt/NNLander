@@ -27,3 +27,4 @@ include_directories(Common)
 
 # Add subdirectories for each lander demo
 add_subdirectory(Lander01)
+add_subdirectory(Lander02)
