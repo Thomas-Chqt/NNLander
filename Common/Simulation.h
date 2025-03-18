@@ -6,6 +6,7 @@
 #include <string>
 #include <array>
 #include <algorithm>
+#include <functional>
 
 //==================================================================
 // General simulation parameters (screen size, gravity, etc.)
@@ -22,48 +23,29 @@ public:
     float GROUND_LEVEL = 30.0f;
 };
 
-//==================================================================
-// Brain-to-simulation interface.
-// For this interface we work with arrays of floats.
-// This is a generalization that fits well with neural networks.
-//==================================================================
-class SimBrainBase
+// Indices of states in the simulation state array
+enum SimBrainState
 {
-public:
-    // Indices of states in the simulation state array
-    enum
-    {
-        SIM_STATE_LANDER_X = 0,
-        SIM_STATE_LANDER_Y,
-        SIM_STATE_LANDER_VX,
-        SIM_STATE_LANDER_VY,
-        SIM_STATE_LANDER_FUEL,
-        SIM_STATE_LANDER_STATE_LANDED,
-        SIM_STATE_LANDER_STATE_CRASHED,
-        SIM_STATE_PAD_X,
-        SIM_STATE_PAD_Y,
-        SIM_STATE_PAD_WIDTH,
-        SIM_STATE_N
-    };
+    SIM_BRAINSTATE_LANDER_X = 0,
+    SIM_BRAINSTATE_LANDER_Y,
+    SIM_BRAINSTATE_LANDER_VX,
+    SIM_BRAINSTATE_LANDER_VY,
+    SIM_BRAINSTATE_LANDER_FUEL,
+    SIM_BRAINSTATE_LANDER_STATE_LANDED,
+    SIM_BRAINSTATE_LANDER_STATE_CRASHED,
+    SIM_BRAINSTATE_PAD_X,
+    SIM_BRAINSTATE_PAD_Y,
+    SIM_BRAINSTATE_PAD_WIDTH,
+    SIM_BRAINSTATE_N
+};
 
-    // Indices of actions from the brain
-    enum
-    {
-        ACTION_UP = 0,
-        ACTION_LEFT,
-        ACTION_RIGHT,
-        ACTION_N
-    };
-
-    // The array type for the simulation state
-    using StateArray = std::array<float, SIM_STATE_N>;
-    // The array type for the brain response
-    using ActionArray = std::array<float, ACTION_N>;
-
-    SimBrainBase() {}
-    virtual ~SimBrainBase() = default;
-
-    virtual ActionArray GetBrainActions(const StateArray& in_simState) = 0;
+// Indices of actions from the brain
+enum SimBrainAction
+{
+    SIM_BRAINACTION_UP = 0,
+    SIM_BRAINACTION_LEFT,
+    SIM_BRAINACTION_RIGHT,
+    SIM_BRAINACTION_N
 };
 
 //==================================================================
@@ -248,6 +230,9 @@ public:
 //==================================================================
 // Simulation class
 //==================================================================
+using GetBrainActionsFnT =
+    std::function<void(const float*, size_t, float*, size_t)>;
+
 class Simulation
 {
 public:
@@ -264,32 +249,36 @@ public:
     {
     }
 
-    void AnimateSim(SimBrainBase& brain)
+    void AnimateSim(const GetBrainActionsFnT& getBrainActions)
     {
         // Skip the simulation if lander is not active
         if (mLander.mStateIsCrashed || mLander.mStateIsLanded)
             return;
 
         // 1. Convert the simulation variables to a simple/flat array for the brain input
-        SimBrainBase::StateArray simState;
-        simState[SimBrainBase::SIM_STATE_LANDER_X] = mLander.mPos.x;
-        simState[SimBrainBase::SIM_STATE_LANDER_Y] = mLander.mPos.y;
-        simState[SimBrainBase::SIM_STATE_LANDER_VX] = mLander.mVel.x;
-        simState[SimBrainBase::SIM_STATE_LANDER_VY] = mLander.mVel.y;
-        simState[SimBrainBase::SIM_STATE_LANDER_FUEL] = mLander.mFuel;
-        simState[SimBrainBase::SIM_STATE_LANDER_STATE_LANDED] = mLander.mStateIsLanded;
-        simState[SimBrainBase::SIM_STATE_LANDER_STATE_CRASHED] = mLander.mStateIsCrashed;
-        simState[SimBrainBase::SIM_STATE_PAD_X] = mLandingPad.mPos.x;
-        simState[SimBrainBase::SIM_STATE_PAD_Y] = mLandingPad.mPos.y;
-        simState[SimBrainBase::SIM_STATE_PAD_WIDTH] = mLandingPad.mPadWidth;
+        std::array<float, SIM_BRAINSTATE_N> simState {};
+        simState[SIM_BRAINSTATE_LANDER_X] = mLander.mPos.x;
+        simState[SIM_BRAINSTATE_LANDER_Y] = mLander.mPos.y;
+        simState[SIM_BRAINSTATE_LANDER_VX] = mLander.mVel.x;
+        simState[SIM_BRAINSTATE_LANDER_VY] = mLander.mVel.y;
+        simState[SIM_BRAINSTATE_LANDER_FUEL] = mLander.mFuel;
+        simState[SIM_BRAINSTATE_LANDER_STATE_LANDED] = mLander.mStateIsLanded;
+        simState[SIM_BRAINSTATE_LANDER_STATE_CRASHED] = mLander.mStateIsCrashed;
+        simState[SIM_BRAINSTATE_PAD_X] = mLandingPad.mPos.x;
+        simState[SIM_BRAINSTATE_PAD_Y] = mLandingPad.mPos.y;
+        simState[SIM_BRAINSTATE_PAD_WIDTH] = mLandingPad.mPadWidth;
 
         // 2. Get the brain actions
-        const auto actions = brain.GetBrainActions(simState);
+        std::array<float, SIM_BRAINACTION_N> actions {};
+        getBrainActions(
+            simState.data(), std::size(simState),
+            actions.data(), std::size(actions)
+        );
 
         // 3. Convert the brain actions to the simulation variables
-        mLander.mControl_UpThrust = actions[SimBrainBase::ACTION_UP] > 0.5f;
-        mLander.mControl_LeftThrust = actions[SimBrainBase::ACTION_LEFT] > 0.5f;
-        mLander.mControl_RightThrust = actions[SimBrainBase::ACTION_RIGHT] > 0.5f;
+        mLander.mControl_UpThrust = actions[SIM_BRAINACTION_UP] > 0.5f;
+        mLander.mControl_LeftThrust = actions[SIM_BRAINACTION_LEFT] > 0.5f;
+        mLander.mControl_RightThrust = actions[SIM_BRAINACTION_RIGHT] > 0.5f;
 
         mLander.AnimLander(); // Update lander
         mLandingPad.CheckPadLanding(mLander); // Check for landing

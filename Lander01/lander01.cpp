@@ -9,29 +9,21 @@ static const int SCREEN_HEIGHT = 600;
 static void drawUI(Simulation& sim);
 
 //==================================================================
-// UserBrain is an interface between the user and the simulation
+// This is just an interface to the user's brain ;)
 //==================================================================
-class UserBrain : public SimBrainBase
+static void getUserBrainActions(
+    const float* in_simState, size_t in_simStateN,
+    float* out_actions, size_t out_actionsN)
 {
-public:
-    UserBrain() {}
+    // We ignore the input state here, because it's up to the user
+    // to see the simulation on screen and decide what to do
+    (void)in_simState; (void)in_simStateN;
 
-    ActionArray GetBrainActions(const StateArray& in_simState) override
-    {
-        // We ignore the input state here, because it's up to the user
-        // to see the simulation on screen and decide what to do
-        (void)in_simState;
-
-        // Set the actions based on the user input
-        ActionArray out_actions;
-        out_actions[ACTION_UP]    = (float)IsKeyDown(KEY_UP);
-        out_actions[ACTION_LEFT]  = (float)IsKeyDown(KEY_LEFT);
-        out_actions[ACTION_RIGHT] = (float)IsKeyDown(KEY_RIGHT);
-
-        // Return the actions to the simulation
-        return out_actions;
-    }
-};
+    // Set the actions based on the user input
+    out_actions[SIM_BRAINACTION_UP]    = (float)IsKeyDown(KEY_UP);
+    out_actions[SIM_BRAINACTION_LEFT]  = (float)IsKeyDown(KEY_LEFT);
+    out_actions[SIM_BRAINACTION_RIGHT] = (float)IsKeyDown(KEY_RIGHT);
+}
 
 //==================================================================
 // Main function
@@ -50,11 +42,6 @@ int main()
     // Create the simulation object with the parameters
     Simulation sim(sp);
 
-    // Create the user brain
-    // This an interface with the user, which operates controls
-    // with the keyboard
-    UserBrain userBrain;
-
     // Main game loop
     while (!WindowShouldClose())
     {
@@ -63,7 +50,7 @@ int main()
             sim.mLander.mStateIsLanded == false)
         {
             // Animate the simulation with the user brain
-            sim.AnimateSim(userBrain);
+            sim.AnimateSim(getUserBrainActions);
         }
         else
         {

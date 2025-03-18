@@ -9,56 +9,47 @@ static const int SCREEN_HEIGHT = 600;
 static void drawUI(Simulation& sim);
 
 //==================================================================
-// FixedBrain is a simple rule-based brain that operates based on
-// predeternined rules by the programmer upon observation of the
-// simulation.
+// This is a simple rule-based brain that operates based on
+// predeternined rules implemented the programmer based on
+// observation of the simulation.
 //==================================================================
-class FixedBrain : public SimBrainBase
+static void getFixedBrainActions(
+    const float* in_simState, size_t in_simStateN,
+    float* out_actions, size_t out_actionsN)
 {
-public:
-    FixedBrain() {}
+    // Copy the simulation state variables to more readable names
+    const auto landerX  = in_simState[SIM_BRAINSTATE_LANDER_X];
+    const auto landerY  = in_simState[SIM_BRAINSTATE_LANDER_Y];
+    const auto landerVX = in_simState[SIM_BRAINSTATE_LANDER_VX];
+    const auto landerVY = in_simState[SIM_BRAINSTATE_LANDER_VY];
+    const auto padX     = in_simState[SIM_BRAINSTATE_PAD_X];
+    const auto padY     = in_simState[SIM_BRAINSTATE_PAD_Y];
+    const auto padWidth = in_simState[SIM_BRAINSTATE_PAD_WIDTH];
 
-    ActionArray GetBrainActions(const StateArray& in_simState) override
-    {
-        ActionArray out_actions {}; // Initialize all to 0
+    // Try to keep the lander centered on the pad by applying lateral
+    // thrusts if the lander is too far from the center of the pad
+    const auto tolerance = padWidth / 4.0f;
+    const auto isLanderTooFarLeft = landerX > padX + tolerance;
+    const auto isLanderTooFarRight = landerX < padX - tolerance;
+    const auto isLanderMovingLeft = landerVX < -0.5f;
+    const auto isLanderMovingRight = landerVX > 0.5f;
 
-        // Copy the simulation state variables to more readable names
-        const auto landerX = in_simState[SIM_STATE_LANDER_X];
-        const auto landerY = in_simState[SIM_STATE_LANDER_Y];
-        const auto landerVX = in_simState[SIM_STATE_LANDER_VX];
-        const auto landerVY = in_simState[SIM_STATE_LANDER_VY];
-        const auto padX = in_simState[SIM_STATE_PAD_X];
-        const auto padY = in_simState[SIM_STATE_PAD_Y];
-        const auto padWidth = in_simState[SIM_STATE_PAD_WIDTH];
+    if (isLanderTooFarLeft && !isLanderMovingLeft)
+        out_actions[SIM_BRAINACTION_LEFT] = 1.0f; // Apply LEFT thrust
+    else
+    if (isLanderTooFarRight && !isLanderMovingRight)
+        out_actions[SIM_BRAINACTION_RIGHT] = 1.0f; // Apply RIGHT thrust
 
-        // Try to keep the lander centered on the pad by applying lateral
-        // thrusts if the lander is too far from the center of the pad
-        const auto tolerance = padWidth / 4.0f;
-        const auto isLanderTooFarLeft = landerX > padX + tolerance;
-        const auto isLanderTooFarRight = landerX < padX - tolerance;
-        const auto isLanderMovingLeft = landerVX < -0.5f;
-        const auto isLanderMovingRight = landerVX > 0.5f;
+    // Try to keep the lander from crashing by selectively applying
+    // vertical thrust when somewhat close to the pad and the lander
+    // is dropping too fast
+    const auto minEngageHeight = padWidth * 3; // OK to fall below this height
 
-        if (isLanderTooFarLeft && !isLanderMovingLeft)
-            out_actions[ACTION_LEFT] = 1.0f; // Apply LEFT thrust
-        else
-        if (isLanderTooFarRight && !isLanderMovingRight)
-            out_actions[ACTION_RIGHT] = 1.0f; // Apply RIGHT thrust
-
-        // Try to keep the lander from crashing by selectively applying
-        // vertical thrust when somewhat close to the pad and the lander
-        // is dropping too fast
-        const auto minEngageHeight = padWidth * 3; // OK to fall below this height
-
-        const auto isLanderDroppingTooFast = landerVY > 1.0f;
-        const auto isLanderTooCloseToPad = landerY > padY - minEngageHeight;
-        if (isLanderDroppingTooFast && isLanderTooCloseToPad)
-            out_actions[ACTION_UP] = 1.0f; // Apply UP thrust
-
-        // Return the actions to the simulation
-        return out_actions;
-    }
-};
+    const auto isLanderDroppingTooFast = landerVY > 1.0f;
+    const auto isLanderTooCloseToPad = landerY > padY - minEngageHeight;
+    if (isLanderDroppingTooFast && isLanderTooCloseToPad)
+        out_actions[SIM_BRAINACTION_UP] = 1.0f; // Apply UP thrust
+}
 
 //==================================================================
 // Main function
@@ -77,9 +68,6 @@ int main()
     // Create the simulation object with the parameters
     Simulation sim(sp);
 
-    // Create the fixed brain
-    FixedBrain fixedBrain;
-
     // Main game loop
     while (!WindowShouldClose())
     {
@@ -88,7 +76,7 @@ int main()
             sim.mLander.mStateIsLanded == false)
         {
             // Animate the simulation with the fixed brain
-            sim.AnimateSim(fixedBrain);
+            sim.AnimateSim(getFixedBrainActions);
         }
         else
         {
