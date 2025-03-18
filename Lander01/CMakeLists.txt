@@ -1,5 +1,5 @@
 # Lander01 demo
-add_executable(lander01 main.cpp)
+add_executable(lander01 lander01.cpp)
 
 # Link with raylib
 target_link_libraries(lander01 raylib)
@@ -14,4 +14,4 @@ else()
 endif()
 
 # Installation rules
-install(TARGETS lander01 DESTINATION bin) 
+install(TARGETS lander01 DESTINATION bin)

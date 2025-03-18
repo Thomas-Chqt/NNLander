@@ -62,24 +62,13 @@ cmake --build . --config Release
 
 1. Open the project folder in Visual Studio with "Open Folder"
 2. Visual Studio should detect the CMakeLists.txt and configure the project
-3. Select the "lander_sim.exe" target from the drop-down menu
+3. Select the "lander01.exe" target from the drop-down menu
 4. Press F5 to build and run
 
 ## Project Structure
 
-- `main.cpp` - The main source file containing all game logic
 - `CMakeLists.txt` - CMake build configuration
-
-## Customization
-
-You can modify the game constants at the top of `main.cpp` to adjust:
-
-- Screen dimensions
-- Gravity strength
-- Thrust power
-- Rotation speed
-- Landing parameters
-- Initial fuel amount
+- `Lander*` - Each folder contains an evolution of the demo
 
 ## Notes
 
