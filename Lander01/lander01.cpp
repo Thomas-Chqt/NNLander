@@ -40,7 +40,8 @@ int main()
     sp.SCREEN_HEIGHT = (float)SCREEN_HEIGHT;
 
     // Create the simulation object with the parameters
-    Simulation sim(sp);
+    uint32_t seed = 1134; // Always the same seed
+    Simulation sim(sp, seed);
 
     // Main game loop
     while (!WindowShouldClose())
@@ -56,7 +57,7 @@ int main()
         {
             // Restart game on Space key
             if (IsKeyPressed(KEY_SPACE))
-                sim = Simulation(sp); // Reset the simulation
+                sim = Simulation(sp, ++seed); // New simulation, with new seed
         }
 
         // Begin drawing

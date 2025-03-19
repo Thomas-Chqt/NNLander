@@ -177,7 +177,8 @@ public:
         SimpleNeuralNet net(mNetworkArchitecture);
 
         // Create a simulation for training
-        Simulation trainingSim(mSimParams);
+        uint32_t seed = 1134; // Initial random seed
+        Simulation trainingSim(mSimParams, seed);
 
         // Lambda to handle actions using our neural network
         auto getActions = [&](const float* states, size_t, float* actions, size_t)
@@ -278,7 +279,8 @@ int main()
     sp.SCREEN_HEIGHT = (float)SCREEN_HEIGHT;
 
     // Create the simulation object with the parameters
-    Simulation sim(sp);
+    uint32_t seed = 1134; // Initial random seed
+    Simulation sim(sp, seed);
 
     // Create the training task
     TrainingTask trainingTask(sp, NETWORK_ARCHITECTURE);
@@ -306,8 +308,8 @@ int main()
             restartTimer += deltaTime;
             if (restartTimer >= RESTART_DELAY || IsKeyPressed(KEY_SPACE))
             {
-                // Reset the simulation
-                sim = Simulation(sp);
+                // Reset the simulation, keep the same seed
+                sim = Simulation(sp, seed);
                 restartTimer = 0.0f;
             }
         }

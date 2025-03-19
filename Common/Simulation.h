@@ -1,12 +1,14 @@
 #ifndef SIMULATION_H
 #define SIMULATION_H
 
-#include "raylib.h"
 #include <cmath>
 #include <string>
 #include <array>
 #include <algorithm>
 #include <functional>
+
+#include "raylib.h"
+#include "Utils.h" // For the random number generation
 
 //==================================================================
 // General simulation parameters (screen size, gravity, etc.)
@@ -134,10 +136,11 @@ public:
     Vector2 mPos {0.0f, 0.0f};
     float   mPadWidth = 100.0f;
 
-    LandingPad(const SimParams& sp)
+    LandingPad(const SimParams& sp, uint64_t& seed)
         : sp(sp)
     {
-        mPos.x = GetRandomValue(mPadWidth, sp.SCREEN_WIDTH - mPadWidth);
+        // Random position for the landing pad
+        mPos.x = FastRandomRange(seed, mPadWidth/2, sp.SCREEN_WIDTH - mPadWidth/2);
         mPos.y = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
     }
 
@@ -177,7 +180,7 @@ public:
 
     float mGroundY = 0;
 
-    Terrain(const SimParams& sp, LandingPad& pad)
+    Terrain(const SimParams& sp, LandingPad& pad, uint64_t& seed)
         : sp(sp)
     {
         mGroundY = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
@@ -205,7 +208,7 @@ public:
             {
                 // Very gentle height variation for terrain
                 // Only small variations from the ground level
-                mPoints[i].y = mGroundY + GetRandomValue(-10, 10);
+                mPoints[i].y = mGroundY + FastRandomRange(seed, -10, 10);
             }
         }
     }
@@ -241,11 +244,11 @@ public:
     LandingPad  mLandingPad;
     Terrain     mTerrain;
 
-    Simulation(const SimParams& sp)
+    Simulation(const SimParams& sp, uint64_t seed)
         : sp(sp)
         , mLander(sp, Vector2{sp.SCREEN_WIDTH / 2.0f, sp.SCREEN_HEIGHT / 4.0f})
-        , mLandingPad(sp)
-        , mTerrain(sp, mLandingPad)
+        , mLandingPad(sp, seed)
+        , mTerrain(sp, mLandingPad, seed)
     {
     }
 
