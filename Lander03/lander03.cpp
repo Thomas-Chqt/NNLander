@@ -3,16 +3,35 @@
 #include "Simulation.h"
 #include "SimulationDisplay.h"
 #include <vector>
+#include <random>
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
+static const float RESTART_DELAY = 2.0f;
+static float restartTimer = 0.0f;
 
-static void drawUI(Simulation& sim);
+// Forward declarations
+class SimpleNeuralNet;
+class TrainingTask;
+
+static void drawUI(Simulation& sim, TrainingTask& trainingTask);
+
+//==================================================================
+// Network configuration
+//==================================================================
+static const std::vector<int> NETWORK_ARCHITECTURE = {
+    SIM_BRAINSTATE_N,             // Input layer: simulation state variables
+    (int)(SIM_BRAINSTATE_N*1.25), // Hidden layer
+    (int)(SIM_BRAINSTATE_N*1.25), // Hidden layer
+    SIM_BRAINACTION_N             // Output layer: actions (up, left, right)
+};
 
 //==================================================================
 class SimpleNeuralNet
 {
-    const float* mpParameters {};         // Pointer to weights (owned externally)
     const std::vector<int> mArchitecture; // Network architecture (nodes per layer)
     size_t mTotalParameters = 0;          // Total number of parameters in the network
     size_t mMaxLayerSize = 0;             // Maximum number of neurons in any layer
@@ -48,11 +67,8 @@ The example below is just for illustration.
   - Total Parameters: 68 -> (Connections + Biases)
 */
 
-    SimpleNeuralNet(
-        const float* pParameters,
-        const std::vector<int>& architecture)
-        : mpParameters(pParameters)
-        , mArchitecture(architecture)
+    SimpleNeuralNet(const std::vector<int>& architecture)
+        : mArchitecture(architecture)
     {
         // Calculate total number of parameters needed
         mTotalParameters = 0;
@@ -65,7 +81,10 @@ The example below is just for illustration.
     }
 
     // Feed forward function
-    void FeedForward(const float* inputs, float* outputs)
+    void FeedForward(
+        const float* pParameters,
+        const float* inputs, size_t,
+        float* outputs, size_t)
     {
         // Allocate buffers on the stack to avoid touching the heap
         float* currentLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
@@ -81,20 +100,20 @@ The example below is just for illustration.
         // Process each layer
         for (size_t layer=1; layer < mArchitecture.size(); ++layer)
         {
-            const auto prevLayerSize = mArchitecture[layer-1];
             const auto currentLayerSize = mArchitecture[layer];
+            const auto prevLayerSize = mArchitecture[layer-1];
 
             // For each neuron in the current layer
-            for (int neuron=0; neuron < mArchitecture[layer]; ++neuron)
+            for (int neuron=0; neuron < currentLayerSize; ++neuron)
             {
                 float sum = 0.0f;
 
                 // Sum weighted inputs
                 for (int prevNeuron=0; prevNeuron < prevLayerSize; ++prevNeuron)
-                    sum += currentLayerOutputs[prevNeuron] * mpParameters[paramIdx++];
+                    sum += currentLayerOutputs[prevNeuron] * pParameters[paramIdx++];
 
                 // Add bias
-                sum += mpParameters[paramIdx++];
+                sum += pParameters[paramIdx++];
 
                 // Apply activation function (ReLU in this case)
                 nextLayerOutputs[neuron] = Activate(sum);
@@ -120,14 +139,129 @@ private:
 };
 
 //==================================================================
-static void getNeuralNetBrainActions(
-    const float* in_simState, size_t in_simStateN,
-    float* out_actions, size_t out_actionsN)
+// TrainingTask class - handles neural network training
+//==================================================================
+class TrainingTask
 {
-    // TODO: Implement the neural network brain
-    (void)in_simState; (void)in_simStateN;
-    (void)out_actions; (void)out_actionsN;
-}
+private:
+    // Training parameters
+    static const int MAX_TRAINING_ITERATIONS = 10000; // Increased to 10,000
+    int mCurrentTrainingIteration = 0;
+    float mBestLoss = std::numeric_limits<float>::max();
+    std::vector<float> mBestNetworkParameters;
+    std::vector<int> mNetworkArchitecture;
+    SimParams mSimParams;
+
+public:
+    TrainingTask(const SimParams& sp, const std::vector<int>& architecture)
+        : mNetworkArchitecture(architecture)
+        , mSimParams(sp)
+    {
+    }
+
+    // Run a single training iteration
+    void RunIteration()
+    {
+        // Create a temporary neural network with random parameters
+        SimpleNeuralNet tempNet(mNetworkArchitecture);
+        const size_t paramCount = tempNet.GetTotalParameters();
+
+        // Generate random parameters if we don't have best parameters yet
+        if (mBestNetworkParameters.empty())
+            mBestNetworkParameters.resize(paramCount); // Initializes to 0
+
+        // Generate random parameters for this iteration
+        const auto currentParams = GenerateRandomParameters(paramCount);
+
+        // Create a neural network with the random parameters
+        SimpleNeuralNet net(mNetworkArchitecture);
+
+        // Create a simulation for training
+        Simulation trainingSim(mSimParams);
+
+        // Lambda to handle actions using our neural network
+        auto getActions = [&](const float* states, size_t, float* actions, size_t)
+        {
+            net.FeedForward(currentParams.data(), states, 0, actions, 0);
+        };
+
+        // Run the simulation until it ends
+        double elapsedTimeS = 0.0;
+        const double timeStepS = 1.0 / 60.0; // Assuming 60 FPS
+
+        while (!trainingSim.mLander.mStateIsLanded &&
+               !trainingSim.mLander.mStateIsCrashed &&
+               elapsedTimeS < 30.0) // Maximum 30 seconds simulation time
+        {
+            trainingSim.AnimateSim(getActions);
+            elapsedTimeS += timeStepS;
+        }
+
+        // Calculate loss for this run
+        float currentLoss = CalculateLoss(trainingSim, elapsedTimeS);
+
+        // If this network is better than our current best, save it
+        if (currentLoss < mBestLoss)
+        {
+            mBestLoss = currentLoss;
+            mBestNetworkParameters = currentParams;
+        }
+
+        // Increment the training iteration counter
+        ++mCurrentTrainingIteration;
+    }
+
+    // Calculate loss for a simulation run
+    float CalculateLoss(const Simulation& sim, double elapsedTimeS)
+    {
+        double loss = 0;
+
+        // Calculate distance to pad center
+        const auto landerPos = sim.mLander.mPos;
+        const auto padPos = sim.mLandingPad.mPos;
+        const auto distanceToPad =
+            std::sqrt(std::pow(landerPos.x - padPos.x, 2) +
+                      std::pow(landerPos.y - padPos.y, 2));
+
+        loss += distanceToPad; // Penalize distance to pad
+        loss *= (1 + elapsedTimeS); // Penalize time
+
+        if (sim.mLander.mStateIsLanded)
+            loss /= 10.0; // Bonus for successful landing
+
+        if (sim.mLander.mStateIsCrashed)
+            loss *= 10.0; // Penalty for crashing
+
+        return (float)loss;
+    }
+
+    // Generate random parameters for neural network
+    std::vector<float> GenerateRandomParameters(size_t paramCount)
+    {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+
+        std::vector<float> params(paramCount);
+        for (size_t i = 0; i < paramCount; ++i)
+        {
+            params[i] = dis(gen);
+        }
+
+        return params;
+    }
+
+    const auto& GetBestNetworkParameters() const { return mBestNetworkParameters; }
+
+    // Getters for training status
+    int GetCurrentIteration() const { return mCurrentTrainingIteration; }
+    int GetMaxIterations() const { return MAX_TRAINING_ITERATIONS; }
+    float GetBestLoss() const { return mBestLoss; }
+    bool IsTrainingComplete() const { return mCurrentTrainingIteration >= MAX_TRAINING_ITERATIONS; }
+};
+
+// Global TrainingTask instance
+static TrainingTask* gpTrainingTask = nullptr;
 
 //==================================================================
 // Main function
@@ -135,7 +269,7 @@ static void getNeuralNetBrainActions(
 int main()
 {
     // Initialize window
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lunar Lander Simulation");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lunar Lander - Neural Network Training Demo");
     SetTargetFPS(60);
 
     // Setup the simulation parameters
@@ -146,21 +280,45 @@ int main()
     // Create the simulation object with the parameters
     Simulation sim(sp);
 
+    // Create the training task
+    TrainingTask trainingTask(sp, NETWORK_ARCHITECTURE);
+    gpTrainingTask = &trainingTask;  // Set global pointer to access from callback
+
+    // Neural net object used for testing (will use the best params as they come
+    // from the ongoing training)
+    SimpleNeuralNet testNet(NETWORK_ARCHITECTURE);
+
     // Main game loop
     while (!WindowShouldClose())
     {
-        // Update if it is not crashed or landed
-        if (sim.mLander.mStateIsCrashed == false &&
-            sim.mLander.mStateIsLanded == false)
+        // Run training iterations in the background
+        if (!trainingTask.IsTrainingComplete())
         {
-            // Animate the simulation with the fixed brain
-            sim.AnimateSim(getNeuralNetBrainActions);
+            for (int i=0; i < 10; ++i)
+                trainingTask.RunIteration();
+        }
+
+        float deltaTime = GetFrameTime();
+
+        // Auto-restart after landing or crashing
+        if (sim.mLander.mStateIsLanded || sim.mLander.mStateIsCrashed)
+        {
+            restartTimer += deltaTime;
+            if (restartTimer >= RESTART_DELAY || IsKeyPressed(KEY_SPACE))
+            {
+                // Reset the simulation
+                sim = Simulation(sp);
+                restartTimer = 0.0f;
+            }
         }
         else
         {
-            // Restart game on Space key
-            if (IsKeyPressed(KEY_SPACE))
-                sim = Simulation(sp); // Reset the simulation
+            // Animate the simulation with the neural network brain
+            const auto& bestParams = trainingTask.GetBestNetworkParameters();
+            sim.AnimateSim([&](const float* states, size_t, float* actions, size_t)
+            {
+                testNet.FeedForward(bestParams.data(), states, 0, actions, 0);
+            });
         }
 
         // Begin drawing
@@ -173,17 +331,20 @@ int main()
         // Draw the simulation
         DrawSim(sim);
         // Draw UI
-        drawUI(sim);
+        drawUI(sim, trainingTask);
 
         EndDrawing();
     }
+
+    // Clear the global pointer
+    gpTrainingTask = nullptr;
 
     CloseWindow();
     return 0;
 }
 
 //==================================================================
-static void drawUI(Simulation& sim)
+static void drawUI(Simulation& sim, TrainingTask& trainingTask)
 {
     const int fsize = 20;
     // Draw info
@@ -193,22 +354,36 @@ static void drawUI(Simulation& sim)
     const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
     DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
 
+    // Draw training information
+    const char* trainingStatus = trainingTask.IsTrainingComplete() ?
+                                "TRAINING COMPLETE" : "TRAINING...";
+    DrawText(trainingStatus, SCREEN_WIDTH - 300, 10, fsize, YELLOW);
+
+    DrawText(TextFormat("Epoch: %d/%d",
+                       trainingTask.GetCurrentIteration(),
+                       trainingTask.GetMaxIterations()),
+            SCREEN_WIDTH - 300, 40, fsize, WHITE);
+
+    const float bestLoss = trainingTask.GetBestLoss();
+    DrawText(TextFormat("Best Loss: %.2f", bestLoss),
+            SCREEN_WIDTH - 300, 70, fsize, bestLoss < 100.0f ? GREEN : ORANGE);
+
     // Draw game state message
     if (sim.mLander.mStateIsLanded)
     {
         DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
-        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("Wait for restart or press SPACE", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
     else if (sim.mLander.mStateIsCrashed)
     {
-        DrawText("STATE_CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
-        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
+        DrawText("Wait for restart or press SPACE", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
     }
     else
     {
-        DrawText("UP: Vertical thrust, LEFT/RIGHT: Lateral thrusters",
-            SCREEN_WIDTH - 600, 10,
-            fsize, WHITE);
+        // Display that we're watching the AI play
+        DrawText("AI CONTROLLING LANDER",
+            SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT - 40,
+            fsize, RAYWHITE);
     }
 }
-
