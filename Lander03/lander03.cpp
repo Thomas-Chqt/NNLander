@@ -145,7 +145,7 @@ class TrainingTask
 {
 private:
     // Training parameters
-    static const int MAX_TRAINING_ITERATIONS = 10000; // Increased to 10,000
+    static const int MAX_TRAINING_ITERATIONS = 50000;
     int mCurrentTrainingIteration = 0;
     float mBestLoss = std::numeric_limits<float>::max();
     std::vector<float> mBestNetworkParameters;
@@ -171,7 +171,7 @@ public:
             mBestNetworkParameters.resize(paramCount); // Initializes to 0
 
         // Generate random parameters for this iteration
-        const auto currentParams = GenerateRandomParameters(paramCount);
+        const auto currentParams = GenerateRandomParameters(paramCount, mCurrentTrainingIteration);
 
         // Create a neural network with the random parameters
         SimpleNeuralNet net(mNetworkArchitecture);
@@ -237,17 +237,17 @@ public:
     }
 
     // Generate random parameters for neural network
-    std::vector<float> GenerateRandomParameters(size_t paramCount)
+    std::vector<float> GenerateRandomParameters(size_t paramCount, uint32_t seed = 0)
     {
-        static std::random_device rd;
-        static std::mt19937 gen(rd());
-        static std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+        // Use a random number generator to create random parameters
+        // between -1.0 and 1.0
+        std::mt19937 rng(seed);
+        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
 
+        // Generate random parameters
         std::vector<float> params(paramCount);
         for (size_t i = 0; i < paramCount; ++i)
-        {
-            params[i] = dis(gen);
-        }
+            params[i] = dist(rng);
 
         return params;
     }
@@ -296,7 +296,8 @@ int main()
         // Run training iterations in the background
         if (!trainingTask.IsTrainingComplete())
         {
-            for (int i=0; i < 10; ++i)
+            // Run a small batch, so we don't block the main thread
+            for (int i=0; i < 25; ++i)
                 trainingTask.RunIteration();
         }
 
