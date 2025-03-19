@@ -67,15 +67,11 @@ The example below is just for illustration.
     // Feed forward function
     void FeedForward(const float* inputs, float* outputs)
     {
-        std::vector<float> currentLayerOutputs;
-        std::vector<float> nextLayerOutputs;
-        // Prime the buffers to the maximum layer size to avoid reallocations
-        // This is just a performance optimization
-        currentLayerOutputs.reserve(mMaxLayerSize);
-        nextLayerOutputs.reserve(mMaxLayerSize);
+        // Allocate buffers on the stack to avoid touching the heap
+        float* currentLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
+        float* nextLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
 
-        // Copy inputs to first layer outputs
-        currentLayerOutputs.resize(mArchitecture[0]);
+        // Copy inputs (simulation states) to first layer outputs
         for (int i=0; i < mArchitecture[0]; ++i)
             currentLayerOutputs[i] = inputs[i];
 
@@ -85,7 +81,8 @@ The example below is just for illustration.
         // Process each layer
         for (size_t layer=1; layer < mArchitecture.size(); ++layer)
         {
-            nextLayerOutputs.resize(mArchitecture[layer]);
+            const auto prevLayerSize = mArchitecture[layer-1];
+            const auto currentLayerSize = mArchitecture[layer];
 
             // For each neuron in the current layer
             for (int neuron=0; neuron < mArchitecture[layer]; ++neuron)
@@ -93,7 +90,7 @@ The example below is just for illustration.
                 float sum = 0.0f;
 
                 // Sum weighted inputs
-                for (int prevNeuron=0; prevNeuron < mArchitecture[layer-1]; ++prevNeuron)
+                for (int prevNeuron=0; prevNeuron < prevLayerSize; ++prevNeuron)
                     sum += currentLayerOutputs[prevNeuron] * mpParameters[paramIdx++];
 
                 // Add bias
@@ -103,8 +100,8 @@ The example below is just for illustration.
                 nextLayerOutputs[neuron] = Activate(sum);
             }
 
-            // Swap buffers
-            currentLayerOutputs = nextLayerOutputs;
+            // Swap buffers, next-layer output becomes current-layer output
+            std::swap(currentLayerOutputs, nextLayerOutputs);
         }
 
         // Copy final layer outputs to outputs array
