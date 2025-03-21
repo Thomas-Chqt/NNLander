@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <chrono>
 
 #include "raylib.h"
 #include "rlgl.h"
@@ -16,7 +17,7 @@ static const int SCREEN_HEIGHT = 600;
 static const float RESTART_DELAY = 2.0f;
 
 // Number of training generations to run
-static const int MAX_TRAINING_GENERATIONS = 10000;
+static const int MAX_TRAINING_GENERATIONS = 5000;
 // Size of population
 static const int POPULATION_SIZE = 100;
 // Mutation parameters
@@ -70,6 +71,10 @@ int main()
 
     float restartTimer = 0.0f;
 
+    // Variables to track training time
+    auto trainingStartTime = std::chrono::steady_clock::now();
+    bool hasTrainingCompleted = false;
+
     // Main game loop
     while (!WindowShouldClose())
     {
@@ -78,6 +83,15 @@ int main()
         {
             // Run a single generation per frame to avoid blocking the UI too much
             trainingTask.RunIteration();
+        }
+        else
+        if (!hasTrainingCompleted)
+        {
+            // Training just completed
+            auto trainingEndTime = std::chrono::steady_clock::now();
+            auto duration = std::chrono::duration_cast<std::chrono::seconds>(trainingEndTime - trainingStartTime).count();
+            printf("Training completed in %i seconds\n", (int)duration);
+            hasTrainingCompleted = true;
         }
 
         // Auto-restart after landing or crashing
