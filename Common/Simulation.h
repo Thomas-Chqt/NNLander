@@ -233,8 +233,7 @@ public:
 //==================================================================
 // Simulation class
 //==================================================================
-using GetBrainActionsFnT =
-    std::function<void(const float*, size_t, float*, size_t)>;
+using GetBrainActionsFnT = std::function<void(const float*, float*)>;
 
 class Simulation
 {
@@ -279,10 +278,7 @@ public:
 
         // 2. Get the brain actions
         std::array<float, SIM_BRAINACTION_N> actions {};
-        getBrainActions(
-            simState.data(), std::size(simState),
-            actions.data(), std::size(actions)
-        );
+        getBrainActions(simState.data(), actions.data());
 
         // 3. Convert the brain actions to the simulation variables
         mLander.mControl_UpThrust = actions[SIM_BRAINACTION_UP] > 0.5f;

@@ -55,11 +55,13 @@ The example below is just for illustration.
         mMaxLayerSize = *std::max_element(mArchitecture.begin(), mArchitecture.end());
     }
 
+    //==================================================================
     // Feed forward function
-    void FeedForward(
-        const float* pParameters,
-        const float* inputs, size_t,
-        float* outputs, size_t)
+    // This function builds a net with the given Parameters and then
+    // applies the Inputs to the net to get the Outputs.
+    // inputs -> net(parameters) -> outputs
+    //==================================================================
+    void FeedForward(const float* pParameters, const float* pInputs, float* pOutputs)
     {
         // Allocate buffers on the stack to avoid touching the heap
         float* currentLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
@@ -67,7 +69,7 @@ The example below is just for illustration.
 
         // Copy inputs (simulation states) to first layer outputs
         for (int i=0; i < mArchitecture[0]; ++i)
-            currentLayerOutputs[i] = inputs[i];
+            currentLayerOutputs[i] = pInputs[i];
 
         // Parameter index tracker
         int paramIdx = 0;
@@ -100,7 +102,7 @@ The example below is just for illustration.
 
         // Copy final layer outputs to outputs array
         for (int i = 0; i < mArchitecture.back(); ++i)
-            outputs[i] = currentLayerOutputs[i];
+            pOutputs[i] = currentLayerOutputs[i];
     }
 
     // Get total number of parameters (weights + biases)

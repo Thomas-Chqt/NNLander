@@ -13,9 +13,7 @@ static void drawUI(Simulation& sim);
 // predeternined rules implemented the programmer based on
 // observation of the simulation.
 //==================================================================
-static void getFixedBrainActions(
-    const float* in_simState, size_t in_simStateN,
-    float* out_actions, size_t out_actionsN)
+static void getFixedBrainActions(const float* in_simState, float* out_actions)
 {
     // Copy the simulation state variables to more readable names
     const auto landerX  = in_simState[SIM_BRAINSTATE_LANDER_X];

@@ -77,9 +77,10 @@ public:
                 trainingSim.GetElapsedTimeS() < 30.0)
         {
             // Lambda to handle actions using our neural network
-            trainingSim.AnimateSim([&](const float* states, size_t, float* actions, size_t)
+            trainingSim.AnimateSim([&](const float* states, float* actions)
             {
-                net.FeedForward(currentParams.data(), states, 0, actions, 0);
+                // states -> net(currentParams) -> actions
+                net.FeedForward(currentParams.data(), states, actions);
             });
         }
 
@@ -179,9 +180,10 @@ int main()
         {
             // Animate the simulation with the neural network brain
             const auto& bestParams = trainingTask.GetBestNetworkParameters();
-            sim.AnimateSim([&](const float* states, size_t, float* actions, size_t)
+            sim.AnimateSim([&](const float* states, float* actions)
             {
-                testNet.FeedForward(bestParams.data(), states, 0, actions, 0);
+                // states -> testNet(bestParams) -> actions
+                testNet.FeedForward(bestParams.data(), states, actions);
             });
         }
 

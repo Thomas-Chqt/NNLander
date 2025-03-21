@@ -11,13 +11,11 @@ static void drawUI(Simulation& sim);
 //==================================================================
 // This is just an interface to the user's brain ;)
 //==================================================================
-static void getUserBrainActions(
-    const float* in_simState, size_t in_simStateN,
-    float* out_actions, size_t out_actionsN)
+static void getUserBrainActions(const float* in_simState, float* out_actions)
 {
     // We ignore the input state here, because it's up to the user
-    // to see the simulation on screen and decide what to do
-    (void)in_simState; (void)in_simStateN;
+    // to see the simulation on screen and decide what to do !
+    (void)in_simState;
 
     // Set the actions based on the user input
     out_actions[SIM_BRAINACTION_UP]    = (float)IsKeyDown(KEY_UP);
