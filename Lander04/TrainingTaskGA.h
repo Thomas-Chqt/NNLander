@@ -9,6 +9,8 @@
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
 
+#define USE_XAVIER_INIT 1
+#define USE_MUTATION_STDDEV 0
 
 //==================================================================
 // ParallelTasks class - handles parallel execution of tasks
@@ -110,11 +112,15 @@ public:
         mPopulation.resize(mPopulationSize);
 
         // Generate random parameters for each individual
+#if USE_XAVIER_INIT
+        std::normal_distribution<float> dist(0.0f, 1.0f / std::sqrt(2.0f));
+#else
         std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-        for (size_t i = 0; i < mPopulationSize; ++i)
+#endif
+        for (size_t i=0; i < mPopulationSize; ++i)
         {
             std::vector<float> params(paramCount);
-            for (size_t j = 0; j < paramCount; ++j)
+            for (size_t j=0; j < paramCount; ++j)
                 params[j] = dist(mRng);
 
             mPopulation[i] = Individual(params);
@@ -203,8 +209,8 @@ public:
         while (mPopulation.size() < mPopulationSize)
         {
             // Select two parents
-            Individual parent1 = SelectParent(oldPopulation);
-            Individual parent2 = SelectParent(oldPopulation);
+            const auto& parent1 = SelectParent(oldPopulation);
+            const auto& parent2 = SelectParent(oldPopulation);
 
             // Perform crossover
             Individual child = Crossover(parent1, parent2);
@@ -220,7 +226,7 @@ public:
     //==================================================================
     // Select a parent using tournament selection
     //==================================================================
-    Individual SelectParent(const std::vector<Individual>& population)
+    const Individual& SelectParent(const std::vector<Individual>& population)
     {
         // Number of individuals to consider in the tournament
         const size_t tournamentSize = 3;
@@ -235,9 +241,7 @@ public:
         for (size_t i = 1; i < tournamentSize && i < indices.size(); ++i)
         {
             if (population[indices[i]].fitness > population[bestIdx].fitness)
-            {
                 bestIdx = indices[i];
-            }
         }
 
         return population[bestIdx];
@@ -264,13 +268,29 @@ public:
     }
 
     //==================================================================
+    static std::array<float, 2> calcMeanAndStdDev(const std::vector<float>& params)
+    {
+        auto mean = std::accumulate(params.begin(), params.end(), 0.0f) / params.size();
+        auto stdDev = std::sqrt(
+                        std::accumulate(params.begin(), params.end(), 0.0f,
+                            [mean](float sum, float x) {
+                                return sum + (x - mean) * (x - mean);
+                            }) / params.size());
+        return { mean, stdDev };
+    }
+
+    //==================================================================
     // Mutate an individual
     //==================================================================
     void Mutate(Individual& individual)
     {
         std::uniform_real_distribution<float> shouldMutate(0.0f, 1.0f);
+#if USE_MUTATION_STDDEV
+        auto [mean, stdDev] = calcMeanAndStdDev(individual.parameters);
+        std::normal_distribution<float> mutation(mean, stdDev);
+#else
         std::normal_distribution<float> mutation(0.0f, mMutationStrength);
-
+#endif
         for (float& param : individual.parameters)
         {
             // Each parameter has a chance to mutate
