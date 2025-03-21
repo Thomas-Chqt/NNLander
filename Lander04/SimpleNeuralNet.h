@@ -64,55 +64,52 @@ The example below is just for illustration.
     void FeedForward(const float* pParameters, const float* pInputs, float* pOutputs) const
     {
         // Allocate buffers on the stack to avoid touching the heap
-        float* currentLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
-        float* nextLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
+        float* lay0_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
+        float* lay1_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
 
         // Copy inputs (simulation states) to first layer outputs
         for (int i=0; i < mArchitecture[0]; ++i)
-            currentLayerOutputs[i] = pInputs[i];
+            lay0_outs[i] = pInputs[i];
 
         // Parameter index tracker
         int paramIdx = 0;
 
         // Process each layer
-        for (size_t layer=1; layer < mArchitecture.size(); ++layer)
+        for (size_t lay_1=1; lay_1 < mArchitecture.size(); ++lay_1)
         {
-            const auto currentLayerSize = mArchitecture[layer];
-            const auto prevLayerSize = mArchitecture[layer-1];
+            const auto lay1_n = mArchitecture[lay_1];
+            const auto lay0_n = mArchitecture[lay_1-1];
 
             // For each neuron in the current layer
-            for (int neuron=0; neuron < currentLayerSize; ++neuron)
+            for (int n1=0; n1 < lay1_n; ++n1)
             {
-                float sum = 0.0f;
-
                 // Sum weighted inputs
-                for (int prevNeuron=0; prevNeuron < prevLayerSize; ++prevNeuron)
-                    sum += currentLayerOutputs[prevNeuron] * pParameters[paramIdx++];
+                auto sum = 0.0f;
+                for (int n0=0; n0 < lay0_n; ++n0)
+                    sum += lay0_outs[n0] * pParameters[paramIdx++];
+                sum += pParameters[paramIdx++]; // Add bias
 
-                // Add bias
-                sum += pParameters[paramIdx++];
-
-                // Apply activation function (ReLU in this case)
-                nextLayerOutputs[neuron] = Activate(sum);
+                lay1_outs[n1] = sum; // Store
             }
+            // Apply activation function to each neuron (faster to do here than in the loop)
+            for (int n1=0; n1 < lay1_n; ++n1)
+                lay1_outs[n1] = Activate(lay1_outs[n1]);
 
             // Swap buffers, next-layer output becomes current-layer output
-            std::swap(currentLayerOutputs, nextLayerOutputs);
+            std::swap(lay0_outs, lay1_outs);
         }
 
         // Copy final layer outputs to outputs array
         for (int i = 0; i < mArchitecture.back(); ++i)
-            pOutputs[i] = currentLayerOutputs[i];
+            pOutputs[i] = lay0_outs[i];
     }
 
     // Get total number of parameters (weights + biases)
     size_t GetTotalParameters() const { return mTotalParameters; }
 
 private:
-    // Activation function (ReLU)
-    float Activate(float x) const {
-        return x > 0.0f ? x : 0.0f;
-    }
+    float Activate(float x) const { return x > 0.0f ? x : 0.0f; } // ReLU
+    //float Activate(float x) const { return x > 0.0f ? x : 0.01f * x; } // Leaky ReLU
 };
 
 #endif 
