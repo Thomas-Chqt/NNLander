@@ -78,20 +78,15 @@ public:
             net.FeedForward(currentParams.data(), states, 0, actions, 0);
         };
 
-        // Run the simulation until it ends
-        double elapsedTimeS = 0.0;
-        const double timeStepS = 1.0 / 60.0; // Assuming 60 FPS
-
-        while (!trainingSim.mLander.mStateIsLanded &&
-               !trainingSim.mLander.mStateIsCrashed &&
-               elapsedTimeS < 30.0) // Maximum 30 seconds simulation time
+        // Run the simulation until it ends, or 30 seconds have passed
+        while (!trainingSim.IsSimulationComplete() &&
+                trainingSim.GetElapsedTimeS() < 30.0)
         {
             trainingSim.AnimateSim(getActions);
-            elapsedTimeS += timeStepS;
         }
 
         // Calculate loss for this run
-        float currentLoss = CalculateLoss(trainingSim, elapsedTimeS);
+        const auto currentLoss = trainingSim.CalculateLoss();
 
         // If this network is better than our current best, save it
         if (currentLoss < mBestLoss)
@@ -102,30 +97,6 @@ public:
 
         // Increment the training iteration counter
         ++mCurrentTrainingIteration;
-    }
-
-    // Calculate loss for a simulation run
-    float CalculateLoss(const Simulation& sim, double elapsedTimeS)
-    {
-        double loss = 0;
-
-        // Calculate distance to pad center
-        const auto landerPos = sim.mLander.mPos;
-        const auto padPos = sim.mLandingPad.mPos;
-        const auto distanceToPad =
-            std::sqrt(std::pow(landerPos.x - padPos.x, 2) +
-                      std::pow(landerPos.y - padPos.y, 2));
-
-        loss += distanceToPad; // Penalize distance to pad
-        loss *= (1 + elapsedTimeS); // Penalize time
-
-        if (sim.mLander.mStateIsLanded)
-            loss /= 10.0; // Bonus for successful landing
-
-        if (sim.mLander.mStateIsCrashed)
-            loss *= 10.0; // Penalty for crashing
-
-        return (float)loss;
     }
 
     // Generate random parameters for neural network

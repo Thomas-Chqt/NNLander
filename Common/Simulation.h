@@ -243,7 +243,10 @@ public:
     Lander      mLander;
     LandingPad  mLandingPad;
     Terrain     mTerrain;
+    const double mTimeStepS = 1.0 / 60.0;
+    double      mElapsedTimeS = 0;
 
+    // Constructor
     Simulation(const SimParams& sp, uint64_t seed)
         : sp(sp)
         , mLander(sp, Vector2{sp.SCREEN_WIDTH * 0.5f, sp.SCREEN_HEIGHT * 0.75f})
@@ -252,11 +255,14 @@ public:
     {
     }
 
+    // Execute one simulation step
     void AnimateSim(const GetBrainActionsFnT& getBrainActions)
     {
         // Skip the simulation if lander is not active
         if (mLander.mStateIsCrashed || mLander.mStateIsLanded)
             return;
+
+        mElapsedTimeS += mTimeStepS;
 
         // 1. Convert the simulation variables to a simple/flat array for the brain input
         std::array<float, SIM_BRAINSTATE_N> simState {};
@@ -286,6 +292,39 @@ public:
         mLander.AnimLander(); // Update lander
         mLandingPad.CheckPadLanding(mLander); // Check for landing
         mTerrain.CheckTerrainCollision(mLander); // Check for terrain collision
+    }
+
+    // Get the elapsed time in seconds
+    double GetElapsedTimeS() const { return mElapsedTimeS; }
+
+    // Check if the simulation is complete
+    bool IsSimulationComplete() const
+    {
+        return mLander.mStateIsLanded || mLander.mStateIsCrashed;
+    }
+
+    // Calculate the loss for the simulation
+    float CalculateLoss() const
+    {
+        double loss = 0;
+
+        // Calculate distance to pad center
+        const auto landerPos = mLander.mPos;
+        const auto padPos = mLandingPad.mPos;
+        const auto distanceToPad =
+            std::sqrt(std::pow(landerPos.x - padPos.x, 2) +
+                      std::pow(landerPos.y - padPos.y, 2));
+
+        loss += distanceToPad; // Penalize distance to pad
+        loss *= (1 + mElapsedTimeS); // Penalize time
+
+        if (mLander.mStateIsLanded)
+            loss /= 10.0; // Bonus for successful landing
+
+        if (mLander.mStateIsCrashed)
+            loss *= 10.0; // Penalty for crashing
+
+        return (float)loss;
     }
 };
 
