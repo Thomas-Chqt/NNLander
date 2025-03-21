@@ -8,9 +8,13 @@ target_link_libraries(lander04 raylib)
 if (MSVC)
     # Warning level 4 but don't treat as errors
     target_compile_options(lander04 PRIVATE /W4)
+    # Additional optimizations
+    target_compile_options(lander04 PRIVATE $<$<CONFIG:Release>:/O2 /Ob3 /Oi /Ot /GL /fp:fast /Gw /Gy>)
 else()
     # Extensive warnings but don't treat as errors
     target_compile_options(lander04 PRIVATE -Wall -Wextra)
+    # Additional optimizations
+    target_compile_options(lander04 PRIVATE $<$<CONFIG:Release>:-O3 -march=native -flto -ffast-math -funroll-loops>)
 endif()
 
 # Installation rules
