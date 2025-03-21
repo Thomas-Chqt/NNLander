@@ -4,8 +4,32 @@
 #include <random>
 #include <algorithm>
 #include <numeric>
+#include <future>
+#include <thread>
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
+
+
+//==================================================================
+// ParallelTasks class - handles parallel execution of tasks
+//==================================================================
+class ParallelTasks
+{
+    std::vector<std::future<void>> mFutures;
+    unsigned int mThreadsN {};
+public:
+    ParallelTasks() : mThreadsN(std::thread::hardware_concurrency()) {}
+
+    void AddTask(std::function<void()> task)
+    {
+        if (mFutures.size() >= mThreadsN)
+        {
+            mFutures.front().wait();
+            mFutures.erase(mFutures.begin());
+        }
+        mFutures.push_back(std::async(std::launch::async, task));
+    }
+};
 
 //==================================================================
 // Individual class - represents a single member of the population
@@ -133,19 +157,25 @@ public:
     //==================================================================
     void EvaluatePopulation()
     {
+        const uint32_t simStartSeed = 1134;
+        const size_t simVariants = 10;
+
+        // General network object (invariant for all individuals)
         SimpleNeuralNet net(mNetworkArchitecture);
 
-        const uint32_t simStartSeed = 1134;
-        static size_t simVariants = 10;
+        ParallelTasks pt; // Parallelization system
 
-        // Evaluate each individual's fitness
+        // Evaluate each individual's fitness in parallel
         for (auto& individual : mPopulation)
         {
-            double sum = 0.0;
-            for (size_t i = 0; i < simVariants; ++i)
-                sum += TestNetworkOnSimulation(simStartSeed + i, net, individual.parameters);
+            pt.AddTask([&]()
+            {
+                double sum = 0.0;
+                for (size_t i = 0; i < simVariants; ++i)
+                    sum += TestNetworkOnSimulation(simStartSeed + i, net, individual.parameters);
 
-            individual.fitness = sum / (double)simVariants;
+                individual.fitness = sum / (double)simVariants;
+            });
         }
     }
 
