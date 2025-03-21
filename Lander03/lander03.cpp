@@ -9,6 +9,7 @@
 #include "Simulation.h"
 #include "SimulationDisplay.h"
 #include "SimpleNeuralNet.h"
+#include "TrainingTaskRandom.h"
 
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
@@ -18,9 +19,7 @@ static const float RESTART_DELAY = 2.0f;
 static const int MAX_TRAINING_EPOCHS = 50000;
 
 // Forward declarations
-class TrainingTask;
-
-static void drawUI(Simulation& sim, TrainingTask& trainingTask);
+static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask);
 
 //==================================================================
 // Network configuration
@@ -30,105 +29,6 @@ static const std::vector<int> NETWORK_ARCHITECTURE = {
     (int)(SIM_BRAINSTATE_N*1.25), // Hidden layer
     (int)(SIM_BRAINSTATE_N*1.25), // Hidden layer
     SIM_BRAINACTION_N             // Output layer: actions (up, left, right)
-};
-
-//==================================================================
-// TrainingTask class - handles neural network training
-//==================================================================
-class TrainingTask
-{
-private:
-    // Training parameters
-    double mBestScore = -std::numeric_limits<double>::max();
-    std::vector<float> mBestNetworkParameters;
-    std::vector<int> mNetworkArchitecture;
-    SimParams mSimParams;
-
-    // Training parameters
-    size_t mMaxEpochs = 0 ;
-    size_t mCurrentEpoch = 0;
-
-public:
-    TrainingTask(
-        const SimParams& sp,
-        const std::vector<int>& architecture,
-        size_t maxEpochs)
-        : mNetworkArchitecture(architecture)
-        , mSimParams(sp)
-        , mMaxEpochs(maxEpochs)
-    {
-    }
-
-    // Run a single training iteration
-    void RunIteration()
-    {
-        // Create a temporary neural network with random parameters
-        SimpleNeuralNet tempNet(mNetworkArchitecture);
-        const size_t paramCount = tempNet.GetTotalParameters();
-
-        // Generate random parameters if we don't have best parameters yet
-        if (mBestNetworkParameters.empty())
-            mBestNetworkParameters.resize(paramCount); // Initializes to 0
-
-        // Generate random parameters for this iteration
-        const auto currentParams = GenerateRandomParameters(paramCount, mCurrentEpoch);
-
-        // Create a neural network with the random parameters
-        SimpleNeuralNet net(mNetworkArchitecture);
-
-        // Create a simulation for training
-        uint32_t seed = 1134; // Initial random seed
-        Simulation trainingSim(mSimParams, seed);
-
-        // Run the simulation until it ends, or 30 seconds have passed
-        while (!trainingSim.IsSimulationComplete() &&
-                trainingSim.GetElapsedTimeS() < 30.0)
-        {
-            // Lambda to handle actions using our neural network
-            trainingSim.AnimateSim([&](const float* states, float* actions)
-            {
-                // states -> net(currentParams) -> actions
-                net.FeedForward(currentParams.data(), states, actions);
-            });
-        }
-
-        // Calculate score for this run
-        const auto currentScore = trainingSim.CalculateScore();
-
-        // If this network is better than our current best, save it
-        if (currentScore > mBestScore)
-        {
-            mBestScore = currentScore;
-            mBestNetworkParameters = currentParams;
-        }
-
-        // Increment the training epoch counter
-        mCurrentEpoch += 1;
-    }
-
-    // Generate random parameters for neural network
-    std::vector<float> GenerateRandomParameters(size_t paramCount, uint32_t seed = 0)
-    {
-        // Use a random number generator to create random parameters
-        // between -1.0 and 1.0
-        std::mt19937 rng(seed);
-        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-
-        // Generate random parameters
-        std::vector<float> params(paramCount);
-        for (size_t i = 0; i < paramCount; ++i)
-            params[i] = dist(rng);
-
-        return params;
-    }
-
-    const auto& GetBestNetworkParameters() const { return mBestNetworkParameters; }
-
-    // Getters for training status
-    size_t GetCurrentEpoch() const { return mCurrentEpoch; }
-    size_t GetMaxEpochs() const { return mMaxEpochs; }
-    double GetBestScore() const { return mBestScore; }
-    bool IsTrainingComplete() const { return mCurrentEpoch >= mMaxEpochs; }
 };
 
 //==================================================================
@@ -150,7 +50,7 @@ int main()
     Simulation sim(sp, seed);
 
     // Create the training task
-    TrainingTask trainingTask(sp, NETWORK_ARCHITECTURE, MAX_TRAINING_EPOCHS);
+    TrainingTaskRandom trainingTask(sp, NETWORK_ARCHITECTURE, MAX_TRAINING_EPOCHS);
 
     // Neural net object used for testing (will use the best params as they come
     // from the ongoing training)
@@ -211,7 +111,7 @@ int main()
 }
 
 //==================================================================
-static void drawUI(Simulation& sim, TrainingTask& trainingTask)
+static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
 {
     const int fsize = 20;
     // Draw info

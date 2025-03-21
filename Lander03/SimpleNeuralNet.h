@@ -61,7 +61,7 @@ The example below is just for illustration.
     // applies the Inputs to the net to get the Outputs.
     // inputs -> net(parameters) -> outputs
     //==================================================================
-    void FeedForward(const float* pParameters, const float* pInputs, float* pOutputs)
+    void FeedForward(const float* pParameters, const float* pInputs, float* pOutputs) const
     {
         // Allocate buffers on the stack to avoid touching the heap
         float* currentLayerOutputs = (float*)alloca(mMaxLayerSize * sizeof(float));
