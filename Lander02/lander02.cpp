@@ -45,8 +45,8 @@ static void getFixedBrainActions(
     // is dropping too fast
     const auto minEngageHeight = padWidth * 3; // OK to fall below this height
 
-    const auto isLanderDroppingTooFast = landerVY > 1.0f;
-    const auto isLanderTooCloseToPad = landerY > padY - minEngageHeight;
+    const auto isLanderDroppingTooFast = landerVY < -1.0f;
+    const auto isLanderTooCloseToPad = landerY < minEngageHeight - padY;
     if (isLanderDroppingTooFast && isLanderTooCloseToPad)
         out_actions[SIM_BRAINACTION_UP] = 1.0f; // Apply UP thrust
 }

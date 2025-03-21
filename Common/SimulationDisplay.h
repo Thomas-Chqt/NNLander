@@ -8,14 +8,26 @@
 // to keep the actual simulation code clean and readable
 
 //==================================================================
-inline void DrawLander(const Lander& lander)
+// Convert simulation coordinates to screen coordinates
+// In the simulation y=0 -> bottom, but in the display y=0 -> top
+inline Vector2 SimToScreen(const Vector2& simPos, const SimParams& sp)
+{
+    return Vector2
+    {
+        simPos.x,
+        sp.SCREEN_HEIGHT - simPos.y
+    };
+}
+
+//==================================================================
+inline void DrawLander(const Lander& lander, const SimParams& sp)
 {
     Color landerColor = WHITE;
     if (lander.mStateIsLanded) landerColor = GREEN;
     if (lander.mStateIsCrashed) landerColor = RED;
 
-    const auto drawX = lander.mPos.x;
-    const auto drawY = lander.mPos.y - 20;
+    const auto drawX = SimToScreen(lander.mPos, sp).x;
+    const auto drawY = SimToScreen(lander.mPos, sp).y - 20;
 
     // Main body
     DrawRectangle(drawX - 15, drawY - 15, 30, 30, landerColor);
@@ -63,10 +75,11 @@ inline void DrawLander(const Lander& lander)
 }
 
 //==================================================================
-inline void DrawLandingPad(const LandingPad& pad)
+inline void DrawLandingPad(const LandingPad& pad, const SimParams& sp)
 {
-    const auto px = pad.mPos.x;
-    const auto py = pad.mPos.y;
+    const auto spos = SimToScreen(pad.mPos, sp);
+    const auto px = spos.x;
+    const auto py = spos.y;
     const auto w = pad.mPadWidth;
     DrawRectangle(px - w/2, py, w, 10, GREEN);
 
@@ -79,19 +92,18 @@ inline void DrawLandingPad(const LandingPad& pad)
 }
 
 //==================================================================
-inline void DrawTerrain(const Terrain& terrain)
+inline void DrawTerrain(const Terrain& terrain, const SimParams& sp)
 {
     const auto& pts = terrain.mPoints;
-    const auto& sp = terrain.sp;
     for (size_t i=0; i < Terrain::SEGMENTS_N; ++i)
     {
-        DrawLineEx(pts[i], pts[i + 1], 2.0f, DARKBROWN);
         // Fill terrain below
-        const auto p0 = pts[i];
-        const auto p1 = pts[i + 1];
+        const auto p0 = SimToScreen(pts[i], sp);
+        const auto p1 = SimToScreen(pts[i + 1], sp);
         const auto p2 = Vector2{p0.x, sp.SCREEN_HEIGHT};
         const auto p3 = Vector2{p1.x, sp.SCREEN_HEIGHT};
         //const auto p4 = Vector2{p0.x, sp.SCREEN_HEIGHT};
+        DrawLineEx(p0, p1, 2.0f, DARKBROWN);
         DrawTriangle(p0, p1, p2, BROWN);
         DrawTriangle(p1, p3, p2, BROWN);
     }
@@ -100,9 +112,9 @@ inline void DrawTerrain(const Terrain& terrain)
 //==================================================================
 inline void DrawSim(const Simulation& sim)
 {
-    DrawTerrain(sim.mTerrain); // Draw terrain
-    DrawLandingPad(sim.mLandingPad); // Draw landing pad
-    DrawLander(sim.mLander); // Draw lander
+    DrawTerrain(sim.mTerrain, sim.sp); // Draw terrain
+    DrawLandingPad(sim.mLandingPad, sim.sp); // Draw landing pad
+    DrawLander(sim.mLander, sim.sp); // Draw lander
 }
 
 #endif

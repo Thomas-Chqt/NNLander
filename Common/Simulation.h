@@ -18,7 +18,7 @@ class SimParams
 public:
     float SCREEN_WIDTH = 800;
     float SCREEN_HEIGHT = 600;
-    float GRAVITY = 0.05f;
+    float GRAVITY = -0.05f;
     float VERTICAL_THRUST_POWER = 0.1f;
     float LATERAL_THRUST_POWER = 0.08f;
     float LANDING_SAFE_SPEED = 1.5f;
@@ -89,7 +89,7 @@ public:
         {
             if (mControl_UpThrust) // Vertical thrust
             {
-                mVel.y -= sp.VERTICAL_THRUST_POWER;
+                mVel.y += sp.VERTICAL_THRUST_POWER;
                 mFuel -= 0.5f; // Consume fuel
             }
 
@@ -116,8 +116,8 @@ public:
         // Limit lander to screen edges
         mPos.x = std::clamp(mPos.x, 0.0f, (float)sp.SCREEN_WIDTH);
 
-        // Check bounds for y-axis
-        if (mPos.y < 0) mPos.y = 0;
+        // Limit lander to the top of the area
+        if (mPos.y > sp.SCREEN_HEIGHT) mPos.y = sp.SCREEN_HEIGHT;
     }
 
     float CalcSpeed()
@@ -141,7 +141,7 @@ public:
     {
         // Random position for the landing pad
         mPos.x = FastRandomRange(seed, mPadWidth/2, sp.SCREEN_WIDTH - mPadWidth/2);
-        mPos.y = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
+        mPos.y = sp.GROUND_LEVEL;
     }
 
     // See if it's in the pad area and if it landed or crashed
@@ -151,7 +151,7 @@ public:
         const auto landerX = lander.mPos.x;
         const auto landerY = lander.mPos.y;
         // Check if lander is within landing pad bounds
-        if (landerY >= mPos.y &&
+        if (landerY <= mPos.y &&
             landerX >= mPos.x - mPadWidth/2 &&
             landerX <= mPos.x + mPadWidth/2)
         {
@@ -183,7 +183,7 @@ public:
     Terrain(const SimParams& sp, LandingPad& pad, uint64_t& seed)
         : sp(sp)
     {
-        mGroundY = sp.SCREEN_HEIGHT - sp.GROUND_LEVEL;
+        mGroundY = sp.GROUND_LEVEL;
 
         float segmentWidth = sp.SCREEN_WIDTH / SEGMENTS_N;
 
@@ -220,7 +220,7 @@ public:
         if (lander.mStateIsCrashed || lander.mStateIsLanded)
             return false;
 
-        if (lander.mPos.y >= mGroundY)
+        if (lander.mPos.y <= mGroundY)
         {
             lander.mStateIsCrashed = true;
             return true;
@@ -246,7 +246,7 @@ public:
 
     Simulation(const SimParams& sp, uint64_t seed)
         : sp(sp)
-        , mLander(sp, Vector2{sp.SCREEN_WIDTH / 2.0f, sp.SCREEN_HEIGHT / 4.0f})
+        , mLander(sp, Vector2{sp.SCREEN_WIDTH * 0.5f, sp.SCREEN_HEIGHT * 0.75f})
         , mLandingPad(sp, seed)
         , mTerrain(sp, mLandingPad, seed)
     {
