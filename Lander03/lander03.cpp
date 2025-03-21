@@ -13,7 +13,9 @@
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
 static const float RESTART_DELAY = 2.0f;
-static float restartTimer = 0.0f;
+
+// Number of training epochs to run
+static const int MAX_TRAINING_EPOCHS = 50000;
 
 // Forward declarations
 class TrainingTask;
@@ -37,17 +39,23 @@ class TrainingTask
 {
 private:
     // Training parameters
-    static const int MAX_TRAINING_EPOCHS = 50000;
-    int mCurrentEpoch = 0;
     double mBestScore = -std::numeric_limits<double>::max();
     std::vector<float> mBestNetworkParameters;
     std::vector<int> mNetworkArchitecture;
     SimParams mSimParams;
 
+    // Training parameters
+    size_t mMaxEpochs = 0 ;
+    size_t mCurrentEpoch = 0;
+
 public:
-    TrainingTask(const SimParams& sp, const std::vector<int>& architecture)
+    TrainingTask(
+        const SimParams& sp,
+        const std::vector<int>& architecture,
+        size_t maxEpochs)
         : mNetworkArchitecture(architecture)
         , mSimParams(sp)
+        , mMaxEpochs(maxEpochs)
     {
     }
 
@@ -95,7 +103,7 @@ public:
         }
 
         // Increment the training epoch counter
-        ++mCurrentEpoch;
+        mCurrentEpoch += 1;
     }
 
     // Generate random parameters for neural network
@@ -117,14 +125,11 @@ public:
     const auto& GetBestNetworkParameters() const { return mBestNetworkParameters; }
 
     // Getters for training status
-    int GetCurrentEpoch() const { return mCurrentEpoch; }
-    int GetMaxEpochs() const { return MAX_TRAINING_EPOCHS; }
+    size_t GetCurrentEpoch() const { return mCurrentEpoch; }
+    size_t GetMaxEpochs() const { return mMaxEpochs; }
     double GetBestScore() const { return mBestScore; }
-    bool IsTrainingComplete() const { return mCurrentEpoch >= MAX_TRAINING_EPOCHS; }
+    bool IsTrainingComplete() const { return mCurrentEpoch >= mMaxEpochs; }
 };
-
-// Global TrainingTask instance
-static TrainingTask* gpTrainingTask = nullptr;
 
 //==================================================================
 // Main function
@@ -145,12 +150,13 @@ int main()
     Simulation sim(sp, seed);
 
     // Create the training task
-    TrainingTask trainingTask(sp, NETWORK_ARCHITECTURE);
-    gpTrainingTask = &trainingTask;  // Set global pointer to access from callback
+    TrainingTask trainingTask(sp, NETWORK_ARCHITECTURE, MAX_TRAINING_EPOCHS);
 
     // Neural net object used for testing (will use the best params as they come
     // from the ongoing training)
     SimpleNeuralNet testNet(NETWORK_ARCHITECTURE);
+
+    float restartTimer = 0.0f;
 
     // Main game loop
     while (!WindowShouldClose())
@@ -163,12 +169,10 @@ int main()
                 trainingTask.RunIteration();
         }
 
-        float deltaTime = GetFrameTime();
-
         // Auto-restart after landing or crashing
         if (sim.mLander.mStateIsLanded || sim.mLander.mStateIsCrashed)
         {
-            restartTimer += deltaTime;
+            restartTimer += GetFrameTime();
             if (restartTimer >= RESTART_DELAY || IsKeyPressed(KEY_SPACE))
             {
                 // Reset the simulation, keep the same seed
@@ -202,9 +206,6 @@ int main()
         EndDrawing();
     }
 
-    // Clear the global pointer
-    gpTrainingTask = nullptr;
-
     CloseWindow();
     return 0;
 }
@@ -225,9 +226,9 @@ static void drawUI(Simulation& sim, TrainingTask& trainingTask)
                                 "TRAINING COMPLETE" : "TRAINING...";
     DrawText(trainingStatus, SCREEN_WIDTH - 300, 10, fsize, YELLOW);
 
-    DrawText(TextFormat("Epoch: %d/%d",
-                       trainingTask.GetCurrentEpoch(),
-                       trainingTask.GetMaxEpochs()),
+    DrawText(TextFormat("Epoch: %i/%i",
+                       (int)trainingTask.GetCurrentEpoch(),
+                       (int)trainingTask.GetMaxEpochs()),
             SCREEN_WIDTH - 300, 40, fsize, WHITE);
 
     const double bestScore = trainingTask.GetBestScore();
