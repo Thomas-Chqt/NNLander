@@ -117,21 +117,25 @@ static void drawUI(Simulation& sim)
     DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
 
     // Draw game state message
+    float px = SCREEN_WIDTH/2 - 150;
+    float py = 200;
     if (sim.mLander.mStateIsLanded)
     {
-        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
-        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
+        DrawText(TextFormat("Fixed-Brain Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
+        DrawText("Press SPACE to play again", px, py, fsize, WHITE);
     }
     else if (sim.mLander.mStateIsCrashed)
     {
-        DrawText("STATE_CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
-        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("CRASHED!", px, py, fsize+10, RED); py += 40;
+        DrawText("Press SPACE to try again", px, py, fsize, WHITE);
     }
     else
     {
-        DrawText("UP: Vertical thrust, LEFT/RIGHT: Lateral thrusters",
-            SCREEN_WIDTH - 600, 10,
-            fsize, WHITE);
+        // Flash at an interval to indicate that we're watching the AI play
+        const auto frameCount = (int)(sim.GetElapsedTimeS()*60);
+        if ((frameCount % 50) > 10)
+            DrawText("FIXED-BRAIN CONTROLLING LANDER", px-50, 10, fsize, ORANGE);
     }
 }
 

@@ -37,9 +37,9 @@ class TrainingTask
 {
 private:
     // Training parameters
-    static const int MAX_TRAINING_ITERATIONS = 50000;
-    int mCurrentTrainingIteration = 0;
-    float mBestLoss = std::numeric_limits<float>::max();
+    static const int MAX_TRAINING_EPOCHS = 50000;
+    int mCurrentEpoch = 0;
+    double mBestScore = -std::numeric_limits<double>::max();
     std::vector<float> mBestNetworkParameters;
     std::vector<int> mNetworkArchitecture;
     SimParams mSimParams;
@@ -63,7 +63,7 @@ public:
             mBestNetworkParameters.resize(paramCount); // Initializes to 0
 
         // Generate random parameters for this iteration
-        const auto currentParams = GenerateRandomParameters(paramCount, mCurrentTrainingIteration);
+        const auto currentParams = GenerateRandomParameters(paramCount, mCurrentEpoch);
 
         // Create a neural network with the random parameters
         SimpleNeuralNet net(mNetworkArchitecture);
@@ -72,31 +72,29 @@ public:
         uint32_t seed = 1134; // Initial random seed
         Simulation trainingSim(mSimParams, seed);
 
-        // Lambda to handle actions using our neural network
-        auto getActions = [&](const float* states, size_t, float* actions, size_t)
-        {
-            net.FeedForward(currentParams.data(), states, 0, actions, 0);
-        };
-
         // Run the simulation until it ends, or 30 seconds have passed
         while (!trainingSim.IsSimulationComplete() &&
                 trainingSim.GetElapsedTimeS() < 30.0)
         {
-            trainingSim.AnimateSim(getActions);
+            // Lambda to handle actions using our neural network
+            trainingSim.AnimateSim([&](const float* states, size_t, float* actions, size_t)
+            {
+                net.FeedForward(currentParams.data(), states, 0, actions, 0);
+            });
         }
 
-        // Calculate loss for this run
-        const auto currentLoss = trainingSim.CalculateLoss();
+        // Calculate score for this run
+        const auto currentScore = trainingSim.CalculateScore();
 
         // If this network is better than our current best, save it
-        if (currentLoss < mBestLoss)
+        if (currentScore > mBestScore)
         {
-            mBestLoss = currentLoss;
+            mBestScore = currentScore;
             mBestNetworkParameters = currentParams;
         }
 
-        // Increment the training iteration counter
-        ++mCurrentTrainingIteration;
+        // Increment the training epoch counter
+        ++mCurrentEpoch;
     }
 
     // Generate random parameters for neural network
@@ -118,10 +116,10 @@ public:
     const auto& GetBestNetworkParameters() const { return mBestNetworkParameters; }
 
     // Getters for training status
-    int GetCurrentIteration() const { return mCurrentTrainingIteration; }
-    int GetMaxIterations() const { return MAX_TRAINING_ITERATIONS; }
-    float GetBestLoss() const { return mBestLoss; }
-    bool IsTrainingComplete() const { return mCurrentTrainingIteration >= MAX_TRAINING_ITERATIONS; }
+    int GetCurrentEpoch() const { return mCurrentEpoch; }
+    int GetMaxEpochs() const { return MAX_TRAINING_EPOCHS; }
+    double GetBestScore() const { return mBestScore; }
+    bool IsTrainingComplete() const { return mCurrentEpoch >= MAX_TRAINING_EPOCHS; }
 };
 
 // Global TrainingTask instance
@@ -226,30 +224,33 @@ static void drawUI(Simulation& sim, TrainingTask& trainingTask)
     DrawText(trainingStatus, SCREEN_WIDTH - 300, 10, fsize, YELLOW);
 
     DrawText(TextFormat("Epoch: %d/%d",
-                       trainingTask.GetCurrentIteration(),
-                       trainingTask.GetMaxIterations()),
+                       trainingTask.GetCurrentEpoch(),
+                       trainingTask.GetMaxEpochs()),
             SCREEN_WIDTH - 300, 40, fsize, WHITE);
 
-    const float bestLoss = trainingTask.GetBestLoss();
-    DrawText(TextFormat("Best Loss: %.2f", bestLoss),
-            SCREEN_WIDTH - 300, 70, fsize, bestLoss < 100.0f ? GREEN : ORANGE);
+    const double bestScore = trainingTask.GetBestScore();
+    DrawText(TextFormat("Best Score: %.2f", bestScore),
+            SCREEN_WIDTH - 300, 70, fsize, bestScore < 100.0f ? GREEN : ORANGE);
 
     // Draw game state message
+    float px = SCREEN_WIDTH/2 - 150;
+    float py = 200;
     if (sim.mLander.mStateIsLanded)
     {
-        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
-        DrawText("Wait for restart or press SPACE", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
+        DrawText(TextFormat("AI Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
+        DrawText("Wait for restart or press SPACE", px, py, fsize, WHITE);
     }
     else if (sim.mLander.mStateIsCrashed)
     {
-        DrawText("CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
-        DrawText("Wait for restart or press SPACE", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("CRASHED!", px, py, fsize+10, RED); py += 40;
+        DrawText("Wait for restart or press SPACE", px, py, fsize, WHITE);
     }
     else
     {
-        // Display that we're watching the AI play
-        DrawText("AI CONTROLLING LANDER",
-            SCREEN_WIDTH/2 - 150, SCREEN_HEIGHT - 40,
-            fsize, RAYWHITE);
+        // Flash at an interval to indicate that we're watching the AI play
+        const auto frameCount = (int)(sim.GetElapsedTimeS()*60);
+        if ((frameCount % 50) > 10)
+            DrawText("AI CONTROLLING LANDER", px-90, 10, fsize, ORANGE);
     }
 }

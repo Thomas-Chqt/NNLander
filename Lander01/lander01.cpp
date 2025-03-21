@@ -91,15 +91,18 @@ static void drawUI(Simulation& sim)
     DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
 
     // Draw game state message
+    float px = SCREEN_WIDTH/2 - 150;
+    float py = 200;
     if (sim.mLander.mStateIsLanded)
     {
-        DrawText("SUCCESSFUL LANDING!", SCREEN_WIDTH/2 - 150, 200, fsize+10, GREEN);
-        DrawText("Press SPACE to play again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
+        DrawText(TextFormat("Your Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
+        DrawText("Press SPACE to play again", px, py, fsize, WHITE);
     }
     else if (sim.mLander.mStateIsCrashed)
     {
-        DrawText("STATE_CRASHED!", SCREEN_WIDTH/2 - 80, 200, fsize+10, RED);
-        DrawText("Press SPACE to try again", SCREEN_WIDTH/2 - 150, 240, fsize, WHITE);
+        DrawText("CRASHED!", px, py, fsize+10, RED); py += 40;
+        DrawText("Press SPACE to try again", px, py, fsize, WHITE);
     }
     else
     {

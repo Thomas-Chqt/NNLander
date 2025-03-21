@@ -243,7 +243,7 @@ public:
     Lander      mLander;
     LandingPad  mLandingPad;
     Terrain     mTerrain;
-    const double mTimeStepS = 1.0 / 60.0;
+    static constexpr double mTimeStepS = 1.0 / 60.0;
     double      mElapsedTimeS = 0;
 
     // Constructor
@@ -303,10 +303,10 @@ public:
         return mLander.mStateIsLanded || mLander.mStateIsCrashed;
     }
 
-    // Calculate the loss for the simulation
-    float CalculateLoss() const
+    // Calculate the score for the simulation
+    double CalculateScore() const
     {
-        double loss = 0;
+        double score = 1000;
 
         // Calculate distance to pad center
         const auto landerPos = mLander.mPos;
@@ -315,16 +315,16 @@ public:
             std::sqrt(std::pow(landerPos.x - padPos.x, 2) +
                       std::pow(landerPos.y - padPos.y, 2));
 
-        loss += distanceToPad; // Penalize distance to pad
-        loss *= (1 + mElapsedTimeS); // Penalize time
+        score /= (1 + distanceToPad); // Penalize distance to pad
+        score /= (1 + mElapsedTimeS); // Penalize time
 
         if (mLander.mStateIsLanded)
-            loss /= 10.0; // Bonus for successful landing
+            score *= 10.0; // Bonus for successful landing
 
         if (mLander.mStateIsCrashed)
-            loss *= 10.0; // Penalty for crashing
+            score /= 10.0; // Penalty for crashing
 
-        return (float)loss;
+        return score;
     }
 };
 
