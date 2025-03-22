@@ -135,18 +135,12 @@ public:
     //==================================================================
     void RunIteration()
     {
-        // If this is the first generation, evaluate fitness
-        if (mCurrentGeneration == 0)
-        {
-            EvaluatePopulation();
-        }
-        else
-        {
-            // Create the next generation using genetic operators
+        // If this is not the first generation, create the next generation
+        if (mCurrentGeneration != 0)
             Evolve();
-            // Evaluate the fitness of the new population
-            EvaluatePopulation();
-        }
+
+        // Evaluate the fitness of the population
+        EvaluatePopulation();
 
         // Sort the population by fitness (descending)
         std::sort(mPopulation.begin(), mPopulation.end());
