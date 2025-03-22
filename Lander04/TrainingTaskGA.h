@@ -69,6 +69,9 @@ private:
     double             mMutationRate = 0.1;              // Probability of mutation
     double             mMutationStrength = 0.3;          // Scale of mutation
     double             mElitePercentage = 0.1;           // Percentage of top individuals to keep unchanged
+    // Number of simulations to run for each individual
+    // More variants -> more accurate evaluation (helps prevent overfitting)
+    static constexpr size_t SIM_VARIANTS_N = 10;
 
     // Population
     std::vector<Individual> mPopulation;
@@ -164,7 +167,6 @@ public:
     void EvaluatePopulation()
     {
         const uint32_t simStartSeed = 1134;
-        const size_t simVariants = 10;
 
         // General network object (invariant for all individuals)
         SimpleNeuralNet net(mNetworkArchitecture);
@@ -177,10 +179,10 @@ public:
             pt.AddTask([&]()
             {
                 double sum = 0.0;
-                for (size_t i = 0; i < simVariants; ++i)
+                for (size_t i = 0; i < SIM_VARIANTS_N; ++i)
                     sum += TestNetworkOnSimulation(simStartSeed + i, net, individual.parameters);
 
-                individual.fitness = sum / (double)simVariants;
+                individual.fitness = sum / (double)SIM_VARIANTS_N;
             });
         }
     }
