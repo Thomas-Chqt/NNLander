@@ -46,13 +46,19 @@ The example below is just for illustration.
         : mArchitecture(architecture)
     {
         // Calculate total number of parameters needed
-        mTotalParameters = 0;
-        for (size_t i=1; i < mArchitecture.size(); ++i)
-            // Weights between layers + biases for each neuron in current layer
-            mTotalParameters += mArchitecture[i-1] * mArchitecture[i] + mArchitecture[i];
+        mTotalParameters = CalcTotalParameters(mArchitecture);
 
         // Find the maximum number of neurons in any layer
         mMaxLayerSize = *std::max_element(mArchitecture.begin(), mArchitecture.end());
+    }
+
+    // Given the architecture, calculate the total number of parameters
+    static size_t CalcTotalParameters(const std::vector<int>& architecture)
+    {
+        size_t n = 0;
+        for (size_t i=1; i < architecture.size(); ++i)
+            n += architecture[i-1] * architecture[i] + architecture[i];
+        return n;
     }
 
     //==================================================================

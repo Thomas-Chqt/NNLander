@@ -97,22 +97,13 @@ public:
         , mMutationStrength(mutationStrength)
         , mRng(seed)
     {
-        // Initialize the first generation with random individuals
-        InitializePopulation();
-    }
+        // Here we create the initial population, with random parameters
 
-    //==================================================================
-    // Initialize population with random individuals
-    //==================================================================
-    void InitializePopulation()
-    {
-        // Create the neural network structure (for reference - not used directly)
-        SimpleNeuralNet net(mNetworkArchitecture);
-        const size_t paramCount = net.GetTotalParameters();
+        // How many parameters does the network have ?
+        const auto paramsN = SimpleNeuralNet::CalcTotalParameters(mNetworkArchitecture);
 
-        // Clear and resize the population
-        mPopulation.clear();
-        mPopulation.resize(mPopulationSize);
+        // Create a work buffer for random parameters
+        std::vector<float> paramsWorkBuff(paramsN);
 
         // Generate random parameters for each individual
 #if USE_XAVIER_INIT
@@ -122,25 +113,25 @@ public:
 #endif
         for (size_t i=0; i < mPopulationSize; ++i)
         {
-            std::vector<float> params(paramCount);
-            for (size_t j=0; j < paramCount; ++j)
-                params[j] = dist(mRng);
+            // Generate random parameters in the work buffer
+            for (size_t j=0; j < paramsN; ++j)
+                paramsWorkBuff[j] = dist(mRng);
 
-            mPopulation[i] = Individual(params);
+            // Create an individual with the generated parameters
+            mPopulation.emplace_back(paramsWorkBuff);
         }
     }
 
     //==================================================================
     // Run a single training iteration (one generation)
-    //==================================================================
     void RunIteration()
     {
-        // If this is not the first generation, create the next generation
+        // Create the next generation (if this is not the first generation)
         if (mCurrentGeneration != 0)
-            Evolve();
+            evolve();
 
         // Evaluate the fitness of the population
-        EvaluatePopulation();
+        evaluatePopulation();
 
         // Sort the population by fitness (descending)
         std::sort(mPopulation.begin(), mPopulation.end());
@@ -157,8 +148,7 @@ public:
 
     //==================================================================
     // Evaluate fitness for all individuals in the population
-    //==================================================================
-    void EvaluatePopulation()
+    void evaluatePopulation()
     {
         const uint32_t simStartSeed = 1134;
 
@@ -183,8 +173,7 @@ public:
 
     //==================================================================
     // Create a new generation through selection, crossover and mutation
-    //==================================================================
-    void Evolve()
+    void evolve()
     {
         // Keep track of the original population
         std::vector<Individual> oldPopulation = mPopulation;
@@ -212,7 +201,7 @@ public:
             Individual child = Crossover(parent1, parent2);
 
             // Perform mutation
-            Mutate(child);
+            mutate(child);
 
             // Add the child to the new population
             mPopulation.push_back(child);
@@ -221,7 +210,6 @@ public:
 
     //==================================================================
     // Select a parent using tournament selection
-    //==================================================================
     const Individual& SelectParent(const std::vector<Individual>& population)
     {
         // Number of individuals to consider in the tournament
@@ -245,7 +233,6 @@ public:
 
     //==================================================================
     // Crossover two parents to create a child
-    //==================================================================
     Individual Crossover(const Individual& parent1, const Individual& parent2)
     {
         // Uniform crossover: each parameter has a 50% chance of coming from each parent
@@ -277,8 +264,7 @@ public:
 
     //==================================================================
     // Mutate an individual
-    //==================================================================
-    void Mutate(Individual& individual)
+    void mutate(Individual& individual)
     {
         std::uniform_real_distribution<float> shouldMutate(0.0f, 1.0f);
 #if USE_MUTATION_STDDEV
