@@ -1,0 +1,31 @@
+# ワークショップ前インストール要件
+==================================
+
+以下のソフトウェアがお使いのコンピュータにインストールされていることを確認してください：
+
+1. C++開発ツール：
+   - Windows: Visual Studio Community 2019以降（「C++によるデスクトップ開発」ワークロード付き）
+              (https://visualstudio.microsoft.com/ja/downloads/)
+   - macOS: Xcode Command Line Tools（ターミナルで`xcode-select --install`を実行してインストール）
+   - Linux: GCCまたはClangコンパイラ（ディストリビューションのパッケージマネージャーでインストール、例：`sudo apt install build-essential`）
+
+2. CMake（バージョン3.10以上）：
+   - Windows: https://cmake.org/download/ からダウンロードしてインストール
+   - macOS: Homebrewで`brew install cmake`でインストール
+   - Linux: ディストリビューションのパッケージマネージャーでインストール（例：`sudo apt install cmake`）
+
+3. Git：
+   - Windows: https://git-scm.com/download/win からダウンロードしてインストール
+   - macOS: Homebrewで`brew install git`でインストール、またはXcode Command Line Toolsに付属
+   - Linux: ディストリビューションのパッケージマネージャーでインストール（例：`sudo apt install git`）
+
+4. お好みのテキストエディタまたはIDE（まだお持ちでない場合）：
+   - Visual Studio Codeがすべてのプラットフォームで利用可能で推奨されます：https://code.visualstudio.com/download
+
+ターミナル/コマンドプロンプトを開いて、以下のコマンドが動作することを確認してください：
+- `cmake --version`（3.10以上が表示されるはず）
+- `git --version`
+- Windowsの場合：Visual Studioを開く
+- macOS/Linuxの場合：`g++ --version`または`clang++ --version`
+
+インストールに問題がある場合は、お知らせください。

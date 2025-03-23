@@ -1,0 +1,31 @@
+Pre-Workshop Installation Requirements
+======================================
+
+Please make sure you have the following software installed on your computer:
+
+1. C++ Development Tools:
+   - Windows: Visual Studio Community 2019 or newer with "Desktop development with C++" workload
+              (https://visualstudio.microsoft.com/downloads/)
+   - macOS: Xcode Command Line Tools (install by running `xcode-select --install` in Terminal)
+   - Linux: GCC or Clang compiler (install via your distribution's package manager, e.g., `sudo apt install build-essential`)
+
+2. CMake (version 3.10 or higher):
+   - Windows: Download and install from https://cmake.org/download/
+   - macOS: Install via Homebrew with `brew install cmake`
+   - Linux: Install via your distribution's package manager (e.g., `sudo apt install cmake`)
+
+3. Git:
+   - Windows: Download and install from https://git-scm.com/download/win
+   - macOS: Install via Homebrew with `brew install git` or it comes with Xcode Command Line Tools
+   - Linux: Install via your distribution's package manager (e.g., `sudo apt install git`)
+
+4. A text editor or IDE of your choice (if you don't already have one):
+   - Visual Studio Code is recommended and available for all platforms: https://code.visualstudio.com/download
+
+Please verify your installation by opening a terminal/command prompt and checking that the following commands work:
+- `cmake --version` (should show 3.10 or higher)
+- `git --version`
+- On Windows: Open Visual Studio.
+- On macOS/Linux: `g++ --version` or `clang++ --version`
+
+If you encounter any issues with the installation, please let me know.
