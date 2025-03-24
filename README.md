@@ -11,6 +11,10 @@ Neural Networks applied to a simple 2D lunar lander simulation game.
 This workshop provides a hands-on introduction to application of neural networks to control systems,
 starting with the concept of control systems, simulation environment, input/output of neural networks,
 
+## Workshop Stages
+
+See [slides/slides.pdf](slides/slides.pdf) for the workshop slides.
+
 ### Prerequisites
 
 - CMake (3.10 or higher)
