@@ -4,6 +4,9 @@
 echo "Generating diagrams..."
 bash build_diagrams.sh
 
+echo "Localizing slides..."
+python3 localize_document.py slides.md
+
 # Create Marp configuration if it doesn't exist
 if [ ! -f .marp.json ]; then
     echo '{
