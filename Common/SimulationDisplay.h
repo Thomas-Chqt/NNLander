@@ -33,11 +33,11 @@ inline void DrawStars(const Simulation& sim, int64_t drawFrame)
         {
             star.position.x = (float)GetRandomValue(0, (int)sp.SCREEN_WIDTH);
             star.position.y = (float)GetRandomValue(0, (int)sp.SCREEN_HEIGHT);
-            star.lum = (float)GetRandomValue(50, 100) / 100.0f;
+            star.lum = (float)GetRandomValue(30, 60) / 100.0f;
             star.size = (float)GetRandomValue(50, 100) / 100.0f;
             star.shimmerOff = GetRandomValue(0, 1000);
-            star.shimmerPeriod = GetRandomValue(50, 300);
-            star.shimmerStre = (float)GetRandomValue(40, 80) / 100.0f;
+            star.shimmerPeriod = GetRandomValue(40, 90);
+            star.shimmerStre = (float)GetRandomValue(40, 60) / 100.0f;
         }
     }
 
