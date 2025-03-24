@@ -1,4 +1,7 @@
 # NNLander - 制御システムのための最小限のニューラルネットワーク
+
+![NNLander スクリーンショット](screenshot.png)
+
 シンプルな2D月面着陸シミュレーションゲームに応用されたニューラルネットワーク。
 **[日本語版はこちらをご覧ください](README_ja.md)** | **[View in Japanese](README_ja.md)**
 

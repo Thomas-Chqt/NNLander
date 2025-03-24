@@ -1,5 +1,7 @@
 # NNLander - Minimal Neural Networks for Control Systems
 
+![NNLander Screenshot](screenshot.png)
+
 Neural Networks applied to a simple 2D lunar lander simulation game.
 
 **[日本語版はこちらをご覧ください](README_ja.md)** | **[View in Japanese](README_ja.md)**

@@ -127,6 +127,14 @@ style: |
 
 ---
 
+# NNLander in Action
+
+<div style="display: flex; justify-content: center; align-items: center;">
+  <img src="../screenshot.png" alt="NNLander Screenshot" style="max-width: 90%; height: auto;">
+</div>
+
+---
+
 # Simulation Components
 
 <div style="display: flex; justify-content: center; align-items: center;">
