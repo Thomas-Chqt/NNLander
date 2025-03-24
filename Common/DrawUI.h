@@ -115,12 +115,12 @@ inline void DrawNeuralNetwork(
         float currOffset = (float)(currLayerNodes - 1) * nodeSpacing / 2;
 
         // Draw connections between layers
-        for (size_t prevNode = 0; prevNode < prevLayerNodes; ++prevNode)
+        for (int prevNode=0; prevNode < prevLayerNodes; ++prevNode)
         {
             const auto prevX = startX + (float)prevNode * nodeSpacing - prevOffset;
             const auto prevY = prevLayerY;
 
-            for (size_t currNode = 0; currNode < currLayerNodes; ++currNode)
+            for (int currNode=0; currNode < currLayerNodes; ++currNode)
             {
                 const auto currX = startX + (float)currNode * nodeSpacing - currOffset;
                 const auto currY = currLayerY;
