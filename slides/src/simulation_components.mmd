@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph "Core Simulation"
+        sim[Simulation]:::secondary
+        lander[Lander]:::secondary
+        pad[Landing Pad]:::secondary
+
+        sim --> lander
+        sim --> pad
+    end
+
+    subgraph "Brain Interfaces"
+        user[User Brain\nKeyboard Input]:::tertiary
+        fixed[Fixed Brain\nRule-based Logic]:::tertiary
+        nn[Neural Network\nTrained Parameters]:::tertiary
+    end
+
+    subgraph "Training Components"
+        trainer_random[Random Training\nTrainingTaskRandom]:::quaternary
+        trainer_ga[Genetic Algorithm\nTrainingTaskGA]:::quaternary
+
+        nn_model[SimpleNeuralNet]
+        trainer_random --> nn_model
+        trainer_ga --> nn_model
+    end
+
+    user --> sim
+    fixed --> sim
+    nn --> sim
+
+    subgraph "Visualization"
+        display[SimulationDisplay]:::tertiary
+        ui[DrawUI]:::tertiary
+
+        sim --> display
+        sim --> ui
+    end
+
+    subgraph "Utils"
+        utils[Utility Functions]
+    end
+
+    nn_model --> nn

@@ -1,0 +1,33 @@
+flowchart TB
+    start([Start GA Training]):::secondary --> init[Initialize Population\nwith Random Parameters]
+
+    subgraph "Generation Loop"
+        init --> evaluate[Evaluate Fitness\nof Each Individual]
+        evaluate --> selection[Selection\nChoose Best Performers]:::tertiary
+        selection --> crossover[Crossover\nCombine Parameters]:::tertiary
+        crossover --> mutation[Mutation\nRandom Adjustments]:::tertiary
+        mutation --> new_pop[New Population]
+        new_pop --> check{Convergence or\nMax Generations?}:::decision
+        check -->|No| evaluate
+    end
+
+    check -->|Yes| finish([End Training]):::secondary
+    finish --> deploy[Deploy Best Individual\nto Control Lander]
+
+    subgraph "Population Details"
+        pop1[Population Size: 100]:::quaternary
+        pop2[Mutation Rate: 0.1]:::quaternary
+        pop3[Mutation Strength: 0.3]:::quaternary
+    end
+
+    subgraph "Selection Methods"
+        sel1[Elitism]:::quaternary
+        sel2[Tournament Selection]:::quaternary
+        sel3[Roulette Wheel]:::quaternary
+    end
+
+    subgraph "Crossover Types"
+        cross1[Single-Point]:::quaternary
+        cross2[Uniform]:::quaternary
+        cross3[Arithmetic]:::quaternary
+    end

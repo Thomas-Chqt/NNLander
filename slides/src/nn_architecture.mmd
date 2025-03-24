@@ -1,0 +1,65 @@
+flowchart TD
+    subgraph "Input Layer"
+        I1[Position X]
+        I2[Position Y]
+        I3[Velocity X]
+        I4[Velocity Y]
+        I5[Rotation]
+        I6[Pad Position X]
+        I7[Pad Position Y]
+        I8[Pad Width]
+    end
+
+    subgraph "Hidden Layer 1"
+        H1_1[Node]
+        H1_2[Node]
+        H1_3[Node]
+        H1_4[Node]
+        H1_5[Node]
+        H1_6[Node]
+        H1_7[Node]
+        H1_8[Node]
+        H1_9[Node]
+        H1_10[Node]
+    end
+
+    subgraph "Hidden Layer 2"
+        H2_1[Node]
+        H2_2[Node]
+        H2_3[Node]
+        H2_4[Node]
+        H2_5[Node]
+        H2_6[Node]
+        H2_7[Node]
+        H2_8[Node]
+        H2_9[Node]
+        H2_10[Node]
+    end
+
+    subgraph "Output Layer"
+        O1[Thrust Up]:::secondary
+        O2[Rotate Left]:::secondary
+        O3[Rotate Right]:::secondary
+    end
+
+    I1 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I2 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I3 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I4 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I5 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I6 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I7 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+    I8 --> H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10
+
+    H1_1 & H1_2 & H1_3 & H1_4 & H1_5 & H1_6 & H1_7 & H1_8 & H1_9 & H1_10 --> H2_1 & H2_2 & H2_3 & H2_4 & H2_5 & H2_6 & H2_7 & H2_8 & H2_9 & H2_10
+
+    H2_1 & H2_2 & H2_3 & H2_4 & H2_5 & H2_6 & H2_7 & H2_8 & H2_9 & H2_10 --> O1 & O2 & O3
+
+    style I1 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I2 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I3 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I4 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I5 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I6 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I7 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    style I8 fill:#D0E0FF,stroke:#3367D6,stroke-width:2px

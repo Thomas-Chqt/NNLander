@@ -1,0 +1,26 @@
+flowchart TB
+    start([Start Training]):::secondary --> initialize[Initialize Network Parameters\nRandomly]
+    initialize --> run_sim[Run Simulation\nwith Current Parameters]
+    run_sim --> evaluate[Evaluate Performance\nCompute Score]
+    evaluate --> check_best{Better than\nBest Score?}:::decision
+
+    check_best -->|Yes| save[Save as Best Parameters]
+    check_best -->|No| continue[Continue]
+
+    save --> next_params[Generate New Random\nParameters]
+    continue --> next_params
+
+    next_params --> check_done{Training\nComplete?}:::decision
+
+    check_done -->|No| run_sim
+    check_done -->|Yes| finish([End Training]):::secondary
+
+    finish --> deploy[Deploy Best Parameters\nto Control Lander]
+
+    subgraph "Score Calculation"
+        score1[Successful Landing: +1000]:::tertiary
+        score2[Distance to Pad: -distance]:::tertiary
+        score3[Excessive Velocity: -penalty]:::tertiary
+        score4[Excessive Rotation: -penalty]:::tertiary
+        score5[Remaining Fuel: +bonus]:::tertiary
+    end
