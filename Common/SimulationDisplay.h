@@ -31,10 +31,10 @@ inline void DrawStars(const Simulation& sim, int64_t drawFrame)
         stars.resize(400);
         for (auto& star : stars)
         {
-            star.position.x = GetRandomValue(0, sp.SCREEN_WIDTH);
-            star.position.y = GetRandomValue(0, sp.SCREEN_HEIGHT);
-            star.lum = GetRandomValue(20, 100) / 100.0f;
-            star.size = GetRandomValue(50, 100) / 100.0f;
+            star.position.x = (float)GetRandomValue(0, (int)sp.SCREEN_WIDTH);
+            star.position.y = (float)GetRandomValue(0, (int)sp.SCREEN_HEIGHT);
+            star.lum = (float)GetRandomValue(20, 100) / 100.0f;
+            star.size = (float)GetRandomValue(50, 100) / 100.0f;
             star.shimmerOff = GetRandomValue(0, 10000);
             star.shimmerFreq = GetRandomValue(30, 100);
             star.shimmerStre = (float)GetRandomValue(10, 20) / 100.0f;
@@ -52,7 +52,7 @@ inline void DrawStars(const Simulation& sim, int64_t drawFrame)
 
         auto l = std::clamp(star.lum + shimmer, 0.05f, 1.0f);
         auto col = ColorFromNormalized({l, l, l, 1.0f});
-        DrawCircle(star.position.x, star.position.y, star.size, col);
+        DrawCircleV(star.position, (float)star.size, col);
     }
 }
 
@@ -79,11 +79,11 @@ inline void DrawLander(const Lander& lander, const SimParams& sp)
     const auto drawY = SimToScreen(lander.mPos, sp).y - 20;
 
     // Main body
-    DrawRectangle(drawX - 15, drawY - 15, 30, 30, landerColor);
+    DrawRectangleV({drawX - 15, drawY - 15}, {30.f, 30.f}, landerColor);
 
     // Landing legs
-    DrawLine(drawX - 15, drawY + 15, drawX - 25, drawY + 25, landerColor);
-    DrawLine(drawX + 15, drawY + 15, drawX + 25, drawY + 25, landerColor);
+    DrawLineV({drawX - 15, drawY + 15}, {drawX - 25, drawY + 25}, landerColor);
+    DrawLineV({drawX + 15, drawY + 15}, {drawX + 25, drawY + 25}, landerColor);
 
     // Do not draw flames if lander is crashed or landed or out of fuel
     if (lander.mStateIsCrashed || lander.mStateIsLanded || lander.mFuel <= 0)
@@ -130,13 +130,13 @@ inline void DrawLandingPad(const LandingPad& pad, const SimParams& sp)
     const auto px = spos.x;
     const auto py = spos.y;
     const auto w = pad.mPadWidth;
-    DrawRectangle(px - w/2, py, w, 10, GREEN);
+    DrawRectangleV({px - w/2, py}, {w, 10.f}, GREEN);
 
     // Draw landing lights
     for (int i=0; i < 5; ++i)
     {
         float x = px - ((float)w/2) + ((float)w/4) * i;
-        DrawRectangle(x, py - 5, 3, 5, YELLOW);
+        DrawRectangleV({x, py - 5}, {3.f, 5.f}, YELLOW);
     }
 }
 

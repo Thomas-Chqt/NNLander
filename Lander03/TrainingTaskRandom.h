@@ -41,7 +41,7 @@ public:
         // Create the network structure
         SimpleNeuralNet net(mNetworkArchitecture);
         // A different seed for each epoch, to generate different random parameters
-        const uint32_t networkSeed = mCurrentEpoch + 1111;
+        const uint32_t networkSeed = (uint32_t)(mCurrentEpoch + 1111);
         // Generate random parameters for this new network
         const auto params = generateRandomParameters(net, networkSeed);
 
