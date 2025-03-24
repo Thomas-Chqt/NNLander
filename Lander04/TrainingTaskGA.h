@@ -164,7 +164,10 @@ public:
             {
                 double sum = 0.0;
                 for (size_t i = 0; i < SIM_VARIANTS_N; ++i)
-                    sum += TestNetworkOnSimulation(simStartSeed + i, net, individual.parameters);
+                {
+                    const auto variantSeed = simStartSeed + (uint32_t)i;
+                    sum += TestNetworkOnSimulation(variantSeed, net, individual.parameters);
+                }
 
                 individual.fitness = sum / (double)SIM_VARIANTS_N;
             });
@@ -271,7 +274,7 @@ public:
         auto [mean, stdDev] = calcMeanAndStdDev(individual.parameters);
         std::normal_distribution<float> mutation(mean, stdDev);
 #else
-        std::normal_distribution<float> mutation(0.0f, mMutationStrength);
+        std::normal_distribution<float> mutation(0.0f, (float)mMutationStrength);
 #endif
         for (float& param : individual.parameters)
         {

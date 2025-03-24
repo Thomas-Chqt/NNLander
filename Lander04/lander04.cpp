@@ -33,8 +33,8 @@ static void drawUI(Simulation& sim, TrainingTaskGA& trainingTask);
 //==================================================================
 static const std::vector<int> NETWORK_ARCHITECTURE = {
     SIM_BRAINSTATE_N,             // Input layer: simulation state variables
-    (int)(SIM_BRAINSTATE_N*1.25), // Hidden layer
-    (int)(SIM_BRAINSTATE_N*1.25), // Hidden layer
+    (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
+    (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
     SIM_BRAINACTION_N             // Output layer: actions (up, left, right)
 };
 
