@@ -3,9 +3,58 @@
 
 #include "raylib.h"
 #include "Simulation.h"
+#include <vector>
 
 // Here we collect all the simulation drawing functions
 // to keep the actual simulation code clean and readable
+
+//==================================================================
+// Draw stars in the background
+inline void DrawStars(const Simulation& sim, int64_t drawFrame)
+{
+    struct Star
+    {
+        Vector2 position {0,0};
+        float lum {};
+        float size {};
+        int shimmerOff {};
+        int shimmerFreq {};
+        float shimmerStre {};
+    };
+
+    static std::vector<Star> stars;
+    const auto& sp = sim.sp;
+
+    // Make sure stars are initialized
+    if (stars.empty())
+    {
+        stars.resize(400);
+        for (auto& star : stars)
+        {
+            star.position.x = GetRandomValue(0, sp.SCREEN_WIDTH);
+            star.position.y = GetRandomValue(0, sp.SCREEN_HEIGHT);
+            star.lum = GetRandomValue(20, 100) / 100.0f;
+            star.size = GetRandomValue(50, 100) / 100.0f;
+            star.shimmerOff = GetRandomValue(0, 10000);
+            star.shimmerFreq = GetRandomValue(30, 100);
+            star.shimmerStre = (float)GetRandomValue(10, 20) / 100.0f;
+        }
+    }
+    
+    // Draw each star
+    for (auto& star : stars)
+    {
+        // Only shimmer occasionally based on elapsed time
+        auto shimmer =
+            (float)std::cos(
+                (double)(drawFrame + star.shimmerOff) / (double)star.shimmerFreq)
+                * star.shimmerStre;
+
+        auto l = std::clamp(star.lum + shimmer, 0.05f, 1.0f);
+        auto col = ColorFromNormalized({l, l, l, 1.0f});
+        DrawCircle(star.position.x, star.position.y, star.size, col);
+    }
+}
 
 //==================================================================
 // Convert simulation coordinates to screen coordinates
@@ -112,6 +161,9 @@ inline void DrawTerrain(const Terrain& terrain, const SimParams& sp)
 //==================================================================
 inline void DrawSim(const Simulation& sim)
 {
+    static int64_t drawFrame = 0;
+    drawFrame += 1;
+    DrawStars(sim, drawFrame); // Draw stars (background)
     DrawTerrain(sim.mTerrain, sim.sp); // Draw terrain
     DrawLandingPad(sim.mLandingPad, sim.sp); // Draw landing pad
     DrawLander(sim.mLander, sim.sp); // Draw lander
