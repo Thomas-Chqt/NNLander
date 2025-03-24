@@ -10,6 +10,7 @@
 #include "SimulationDisplay.h"
 #include "SimpleNeuralNet.h"
 #include "TrainingTaskRandom.h"
+#include "DrawUI.h"
 
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
@@ -114,17 +115,11 @@ int main()
 static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
 {
     const int fsize = 20;
-    // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.mLander.mFuel), 10, 10, fsize, WHITE);
 
-    const auto speed = sim.mLander.CalcSpeed();
-    const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
-    DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
+    DrawUIBase(sim, fsize, "ai");
 
     // Draw training information
-    const char* trainingStatus = trainingTask.IsTrainingComplete() ?
-                                "TRAINING COMPLETE" : "TRAINING...";
-    DrawText(trainingStatus, SCREEN_WIDTH - 300, 10, fsize, YELLOW);
+    DrawUITrainingStatus(trainingTask.IsTrainingComplete(), fsize);
 
     DrawText(TextFormat("Epoch: %i/%i",
                        (int)trainingTask.GetCurrentEpoch(),
@@ -134,26 +129,4 @@ static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
     const double bestScore = trainingTask.GetBestScore();
     DrawText(TextFormat("Best Score: %.2f", bestScore),
             SCREEN_WIDTH - 300, 70, fsize, bestScore < 100.0f ? GREEN : ORANGE);
-
-    // Draw game state message
-    float px = SCREEN_WIDTH/2 - 150;
-    float py = 200;
-    if (sim.mLander.mStateIsLanded)
-    {
-        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
-        DrawText(TextFormat("AI Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
-        DrawText("Wait for restart or press SPACE", px, py, fsize, WHITE);
-    }
-    else if (sim.mLander.mStateIsCrashed)
-    {
-        DrawText("CRASHED!", px, py, fsize+10, RED); py += 40;
-        DrawText("Wait for restart or press SPACE", px, py, fsize, WHITE);
-    }
-    else
-    {
-        // Flash at an interval to indicate that we're watching the AI play
-        const auto frameCount = (int)(sim.GetElapsedTimeS()*60);
-        if ((frameCount % 50) > 10)
-            DrawText("AI CONTROLLING LANDER", px-90, 10, fsize, ORANGE);
-    }
 }

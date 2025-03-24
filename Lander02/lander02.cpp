@@ -2,6 +2,7 @@
 #include "rlgl.h"
 #include "Simulation.h"
 #include "SimulationDisplay.h"
+#include "DrawUI.h"
 
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
@@ -107,33 +108,7 @@ int main()
 static void drawUI(Simulation& sim)
 {
     const int fsize = 20;
-    // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.mLander.mFuel), 10, 10, fsize, WHITE);
 
-    const auto speed = sim.mLander.CalcSpeed();
-    const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
-    DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
-
-    // Draw game state message
-    float px = SCREEN_WIDTH/2 - 150;
-    float py = 200;
-    if (sim.mLander.mStateIsLanded)
-    {
-        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
-        DrawText(TextFormat("Fixed-Brain Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
-        DrawText("Press SPACE to play again", px, py, fsize, WHITE);
-    }
-    else if (sim.mLander.mStateIsCrashed)
-    {
-        DrawText("CRASHED!", px, py, fsize+10, RED); py += 40;
-        DrawText("Press SPACE to try again", px, py, fsize, WHITE);
-    }
-    else
-    {
-        // Flash at an interval to indicate that we're watching the AI play
-        const auto frameCount = (int)(sim.GetElapsedTimeS()*60);
-        if ((frameCount % 50) > 10)
-            DrawText("FIXED-BRAIN CONTROLLING LANDER", px-50, 10, fsize, ORANGE);
-    }
+    DrawUIBase(sim, fsize, "fixed");
 }
 

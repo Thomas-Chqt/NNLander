@@ -2,6 +2,7 @@
 #include "rlgl.h"
 #include "Simulation.h"
 #include "SimulationDisplay.h"
+#include "DrawUI.h"
 
 static const int SCREEN_WIDTH = 800;
 static const int SCREEN_HEIGHT = 600;
@@ -81,32 +82,7 @@ int main()
 static void drawUI(Simulation& sim)
 {
     const int fsize = 20;
-    // Draw info
-    DrawText(TextFormat("Fuel: %.0f%%", sim.mLander.mFuel), 10, 10, fsize, WHITE);
 
-    const auto speed = sim.mLander.CalcSpeed();
-    const auto speedColor = sim.sp.LANDING_SAFE_SPEED < speed ? RED : GREEN;
-    DrawText(TextFormat("Speed: %.1f", speed), 10, 40, fsize, speedColor);
-
-    // Draw game state message
-    float px = SCREEN_WIDTH/2 - 150;
-    float py = 200;
-    if (sim.mLander.mStateIsLanded)
-    {
-        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
-        DrawText(TextFormat("Your Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
-        DrawText("Press SPACE to play again", px, py, fsize, WHITE);
-    }
-    else if (sim.mLander.mStateIsCrashed)
-    {
-        DrawText("CRASHED!", px, py, fsize+10, RED); py += 40;
-        DrawText("Press SPACE to try again", px, py, fsize, WHITE);
-    }
-    else
-    {
-        DrawText("UP: Vertical thrust, LEFT/RIGHT: Lateral thrusters",
-            SCREEN_WIDTH - 600, 10,
-            fsize, WHITE);
-    }
+    DrawUIBase(sim, fsize, "user");
 }
 
