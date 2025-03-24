@@ -1,8 +1,95 @@
-# Lander Simulation
+# NNLander - Minimal Neural Networks for Control Systems
 
-A simple 2D lunar lander simulation game built with C++ and Raylib.
+Neural Networks applied to a simple 2D lunar lander simulation game.
 
-## Game Controls
+**[日本語版はこちらをご覧ください](README_ja.md)** | **[View in Japanese](README_ja.md)**
+
+## Overview
+
+This workshop provides a hands-on introduction to application of neural networks to control systems,
+starting with the concept of control systems, simulation environment, input/output of neural networks,
+
+### Prerequisites
+
+- CMake (3.10 or higher)
+- C++ compiler (supporting C++20)
+- Git (for fetching Raylib)
+
+For system setup see:
+- [Workshop Requirements EN](workshop_requirements_nn_en.txt) (English)
+- [Workshop Requirements JA](workshop_requirements_nn_ja.txt) （日本語）
+
+### Building the executables
+
+On Linux/macOS:
+```bash
+./build.sh
+```
+
+On Windows:
+```bash
+./build.bat
+```
+
+### Running the executables
+
+On Linux/macOS:
+```bash
+./build/bin/lander01
+./build/bin/lander02
+./build/bin/lander03
+./build/bin/lander04
+```
+
+On Windows:
+```bash
+.\build\bin\Release\lander01.exe
+.\build\bin\Release\lander02.exe
+.\build\bin\Release\lander03.exe
+.\build\bin\Release\lander04.exe
+```
+
+#### Using Visual Studio
+
+1. Open the .sln file found in the `build` folder
+2. Select the project (e.g.`lander01`) you want to run from the drop-down menu
+3. Select the `Release` configuration
+4. Press F5 to build and run
+
+## Project Structure
+
+```
+NNLander/
+├── README.md                     # Main documentation
+├── README_ja.md                  # Japanese documentation
+├── workshop_requirements_nn_en.txt  # Requirements (English)
+├── workshop_requirements_nn_ja.txt  # Requirements (Japanese)
+├── CMakeLists.txt                # Main CMake configuration
+├── build.sh                      # Build script for Linux/macOS
+├── build.bat                     # Build script for Windows
+├── Common/                       # Shared code for all landers
+│   ├── Simulation.h              # Physics and game simulation
+│   ├── SimulationDisplay.h       # Rendering functionality
+│   ├── SimpleNeuralNet.h         # Neural network implementation
+│   ├── DrawUI.h                  # UI rendering components
+│   └── Utils.h                   # Utility functions
+├── Lander01/                     # Manual control implementation
+│   ├── lander01.cpp              # Main program
+│   └── CMakeLists.txt            # Build configuration
+├── Lander02/                     # Basic neural network implementation
+│   ├── lander02.cpp              # Main program
+│   └── CMakeLists.txt            # Build configuration
+├── Lander03/                     # Improved neural network implementation
+│   ├── lander03.cpp              # Main program
+│   └── CMakeLists.txt            # Build configuration
+├── Lander04/                     # Advanced neural network implementation
+│   ├── lander04.cpp              # Main program
+│   └── CMakeLists.txt            # Build configuration
+├── slides/                       # Workshop presentation materials
+└── build/                        # Build output directory
+```
+
+## Game Controls (for Lander01)
 
 - **Up Arrow**: Apply thrust
 - **Left Arrow**: Rotate counter-clockwise
@@ -13,63 +100,12 @@ A simple 2D lunar lander simulation game built with C++ and Raylib.
 
 - Land safely on the green landing pad
 - Control your descent speed (should be less than 1.5 units)
-- Keep your lander level (angle less than 10 degrees)
 - Manage your fuel consumption
 
-## Building the Project
+## Contact
 
-This project uses CMake as its build system, which makes it platform-independent.
-
-### Prerequisites
-
-- CMake (3.10 or higher)
-- C++ compiler (supporting C++11)
-- Git (for fetching Raylib)
-
-### Building on Linux/macOS
-
-```bash
-# Create a build directory
-mkdir build
-cd build
-
-# Configure and build
-cmake ..
-make
-
-# Run the game
-./bin/lander_sim
-```
-
-### Building on Windows
-
-#### Using Command Line
-
-```bash
-# Create a build directory
-mkdir build
-cd build
-
-# Configure and build
-cmake ..
-cmake --build . --config Release
-
-# Run the game
-.\bin\Release\lander_sim.exe
-```
-
-#### Using Visual Studio
-
-1. Open the project folder in Visual Studio with "Open Folder"
-2. Visual Studio should detect the CMakeLists.txt and configure the project
-3. Select the "lander01.exe" target from the drop-down menu
-4. Press F5 to build and run
-
-## Project Structure
-
-- `CMakeLists.txt` - CMake build configuration
-- `Lander*` - Each folder contains an evolution of the demo
-
-## Notes
-
-The CMake configuration will automatically download and build Raylib if it's not found on your system, making it easy to get started without manual Raylib installation.
+*Davide Pasca*:
+- [davide@newtypekk.com](mailto:davide@newtypekk.com)
+- [github.com/dpasca](https://github.com/dpasca)
+- [newtypekk.com](https://newtypekk.com)
+- [x.com/109mae](https://x.com/109mae)
