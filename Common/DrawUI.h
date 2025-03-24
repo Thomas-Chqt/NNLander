@@ -34,8 +34,12 @@ static void DrawUIBase(Simulation& sim, int fsize, const std::string& ctrl)
     float py = 200;
     if (sim.mLander.mStateIsLanded)
     {
-        DrawText("SUCCESSFUL LANDING!", px, py, fsize+10, GREEN); py += 40;
-        DrawText(TextFormat("Fixed-Brain Score: %.2f", sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
+        const auto* pPlayer = "User";
+        if (ctrl == "ai")    pPlayer = "AI"; else
+        if (ctrl == "fixed") pPlayer = "Fixed-Brain";
+
+        DrawText(TextFormat("SUCCESSFUL LANDING! (%s)", pPlayer), px, py, fsize+10, GREEN); py += 40;
+        DrawText(TextFormat("%s Score: %.2f", pPlayer, sim.CalculateScore()), px, py, fsize+10, SKYBLUE); py += 40;
         DrawText("Press SPACE to play again", px, py, fsize, WHITE);
     }
     else if (sim.mLander.mStateIsCrashed)
