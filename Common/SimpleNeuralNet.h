@@ -110,6 +110,9 @@ The example below is just for illustration.
             pOutputs[i] = lay0_outs[i];
     }
 
+    // Get the architecture of the network
+    const auto& GetArchitecture() const { return mArchitecture; }
+
     // Get total number of parameters (weights + biases)
     size_t GetTotalParameters() const { return mTotalParameters; }
 

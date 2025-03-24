@@ -18,7 +18,7 @@ static const int SCREEN_HEIGHT = 600;
 static const float RESTART_DELAY = 2.0f;
 
 // Number of training generations to run
-static const int MAX_TRAINING_GENERATIONS = 5000;
+static const int MAX_TRAINING_GENERATIONS = 10000;
 // Size of population
 static const int POPULATION_SIZE = 100;
 // Mutation parameters
@@ -159,4 +159,11 @@ static void drawUI(Simulation& sim, TrainingTaskGA& trainingTask)
     DrawText(TextFormat("Population Size: %i",
                        (int)trainingTask.GetPopulationSize()),
             SCREEN_WIDTH - 300, 100, fsize, WHITE);
+
+    // Draw neural network visualization
+    if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)
+    {
+        SimpleNeuralNet net(NETWORK_ARCHITECTURE);
+        DrawNeuralNetwork(net, trainingTask.GetBestNetworkParameters());
+    }
 }
