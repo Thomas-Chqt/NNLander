@@ -80,14 +80,6 @@ expected Outputs.
 
 ---
 
-# NNLander in Action
-
-<div style="display: flex; justify-content: center; align-items: center;">
-  <img src="../screenshot.png" alt="NNLander Screenshot" style="max-width: 90%; height: auto;">
-</div>
-
----
-
 # Lander01: Manual Control
 
 ### Human Brain Interface
@@ -167,80 +159,99 @@ Training is the art of finding the best weights that give desired Outputs for gi
 
 ---
 
+# Computer code can be written as equations
+
+## Classical Code (if-then, rule-based)
+## 古典的なコード（if-then、ルールベース）
+```
+if landerX < targetX
+  stickPosRight = true
+else
+  stickPosRight = false
+```
+
+## Neural Network
+```
+stickPosRight = is_positive(w1 * targetX + w2 * landerX)
+w1 =  1
+w2 = -1
+```
+
+---
+
+# Computer code can be written as equations
+
+Assume that our lander's X position is 10 and the target is 15.
+我々のランダーのX位置が10で、ターゲットが15であると仮定します。
+
+```cpp
+landerX = 10 // Input 1
+targetX = 15 // Input 2
+
+w1      =  1 // Weight 1
+w2      = -1 // Weight 2
+
+stickPosRight = is_positive(w1 * targetX + w2 * landerX)
+stickPosRight = is_positive(1 * 15 + -1 * 10)
+stickPosRight = is_positive(15 - 10)
+stickPosRight = is_positive(5)
+stickPosRight = true // Output !
+```
+
+---
+
+# Finally, NNLander with Neural Networks
+
+<img src="../screenshot.png" alt="NNLander Screenshot" width="750">
+
+
+---
+
 # Lander03: Neural Network Training
 
 ### Random Training Approach
 
-- Neural network with randomly generated parameters
-- Run many simulations with different parameters
-- Keep the best performing network
+- Assing random numbers to all of the weights, and test the simulation.
+  すべての重みにランダムな数値を割り当て、シミュレーションをテストします。
+- Weights with best score are kept.
+  最良のスコアを持つ重みが保持されます。
+- Repeat... maybe we get lucky in 10,000 years.
+  繰り返します... 10,000年後に運が良ければ。
 
-### Training Process
-- Initialize parameters randomly
-- Evaluate performance (scoring)
-- Save parameters if they're better than the best so far
-- Repeat for many epochs
-
----
-
-# Random Training Process
-
-<div style="display: flex; justify-content: center; align-items: center;">
-  <img src="images/random_training_flow.png" alt="Random Training Flow" style="max-width: 90%; height: auto;">
-</div>
+Highly inefficient "dumb" training.
+非常に非効率な「愚かな」トレーニング。
 
 ---
 
 # Lander04: Genetic Algorithm Training
 
+Based on natural selection. `-` 自然選択に基づく。
+
 ### Population-based Training
 
 - Maintain a population of neural networks
+  ニューラルネットワークの集団を維持する
 - Use genetic principles: selection, crossover, mutation
+  遺伝的原理を使用する：選択、交叉、突然変異
 - Evolve better solutions over generations
-
-### Benefits
-- More efficient search of parameter space
-- Can escape local optima
-- Faster convergence to good solutions
+  世代を重ねてより良い解決策を進化させる
 
 ---
 
 # Genetic Algorithm Process
 
-<div style="display: flex; justify-content: center; align-items: center;">
-  <img src="images/genetic_algorithm.png" alt="Genetic Algorithm Process" style="max-width: 90%; height: auto;">
-</div>
+<img src="images/genetic_algorithm.png" alt="Genetic Algorithm Process" width="1200">
 
 ---
 
-# Comparing the Approaches
+# Beyond Genetic Algorithm
 
-<div class="boxed">
+Backpropagation is a more efficient way to train Neural Networks,
+it's the way forward, but comes with its own set of challenges.
+逆伝播法はニューラルネットワークを訓練するためのより効率的な方法であり、前進する方法ですが、独自の課題も伴います。
 
-| Approach | Advantages | Limitations | Learning |
-|----------|------------|-------------|----------|
-| **Manual** | Full control | Human error | Direct feedback |
-| **Rule-based** | Predictable | Not adaptable | None |
-| **Random Training** | Simple to implement | Inefficient | Slow |
-| **Genetic Algorithm** | Efficient, adaptable | More complex | Faster |
-
-</div>
-
----
-
-# Workshop Hands-on Activities
-
-### What You'll Do
-
-1. **Build the project** with CMake
-2. **Run each demo** to observe different behaviors
-3. **Visualize the neural network** learning process
-4. **Experiment with parameters**:
-   - Network architecture
-   - Training parameters
-   - Scoring functions
-5. **Optimize and compare** different approaches
+Feel free to explore !
+自由に探求してください！
 
 ---
 
@@ -249,14 +260,24 @@ Training is the art of finding the best weights that give desired Outputs for gi
 ### Neural Networks Can:
 
 - Learn complex behaviors without explicit programming
+  明示的なプログラミングなしで複雑な動作を学習する
 - Adapt to changing conditions
+  変化する条件に適応する
 - Solve problems where rules are hard to define
+  ルールを定義するのが難しい問題を解決する
+
+---
+
+# Key Insights & Takeaways
 
 ### Important Considerations:
 
 - Training method significantly impacts performance
-- Architecture design matters
+  トレーニング方法はパフォーマンスに大きな影響を与える
 - Scoring/fitness function design is critical
+  スコアリング/フィットネス関数の設計が重要
+- LLMs are helping us today to write classical code, but more and more problems will be solved just with NNs. Start to think in those terms.
+  今日、LLMは古典的なコードを書くのを助けていますが、ますます多くの問題がニューラルネットワークだけで解決されるでしょう。そのように考え始めてください。
 
 ---
 
