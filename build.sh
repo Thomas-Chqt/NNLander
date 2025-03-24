@@ -7,4 +7,4 @@ cmake ..
 echo "Building project with make..."
 make
 popd
-echo "Build completed. Executables are in build/bin/"
+echo "** Build completed. Executables are in build/bin/"
