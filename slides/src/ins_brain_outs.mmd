@@ -1,0 +1,22 @@
+flowchart LR
+    subgraph "Inputs"
+        I1[Position X]:::input
+        I2[Position Y]:::input
+        I3[Velocity X]:::input
+        I4[Velocity Y]:::input
+    end
+
+    NN[Brain]:::brain
+
+    subgraph "Outputs"
+        O1[Thrust Up]:::output
+        O2[Thrust Left]:::output
+        O3[Thrust Right]:::output
+    end
+
+    I1 & I2 & I3 & I4 --> NN
+    NN --> O1 & O2 & O3
+
+    classDef input fill:#D0E0FF,stroke:#3367D6,stroke-width:2px
+    classDef brain fill:#FFE0B2,stroke:#FB8C00,stroke-width:2px
+    classDef output fill:#D5E8D4,stroke:#82B366,stroke-width:2px

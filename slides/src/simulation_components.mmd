@@ -9,14 +9,14 @@ flowchart TB
     end
 
     subgraph "Brain Interfaces"
-        user[User Brain\nKeyboard Input]:::tertiary
-        fixed[Fixed Brain\nRule-based Logic]:::tertiary
-        nn[Neural Network\nTrained Parameters]:::tertiary
+        user[User Brain<br>Keyboard Input]:::tertiary
+        fixed[Fixed Brain<br>Rule-based Logic]:::tertiary
+        nn[Neural Network<br>Trained Parameters]:::tertiary
     end
 
     subgraph "Training Components"
-        trainer_random[Random Training\nTrainingTaskRandom]:::quaternary
-        trainer_ga[Genetic Algorithm\nTrainingTaskGA]:::quaternary
+        trainer_random[Random Training<br>TrainingTaskRandom]:::quaternary
+        trainer_ga[Genetic Algorithm<br>TrainingTaskGA]:::quaternary
 
         nn_model[SimpleNeuralNet]
         trainer_random --> nn_model
@@ -29,14 +29,8 @@ flowchart TB
 
     subgraph "Visualization"
         display[SimulationDisplay]:::tertiary
-        ui[DrawUI]:::tertiary
 
         sim --> display
-        sim --> ui
-    end
-
-    subgraph "Utils"
-        utils[Utility Functions]
     end
 
     nn_model --> nn
