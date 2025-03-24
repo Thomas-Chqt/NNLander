@@ -18,7 +18,7 @@ inline void DrawStars(const Simulation& sim, int64_t drawFrame)
         float lum {};
         float size {};
         int shimmerOff {};
-        int shimmerFreq {};
+        int shimmerPeriod {};
         float shimmerStre {};
     };
 
@@ -33,22 +33,24 @@ inline void DrawStars(const Simulation& sim, int64_t drawFrame)
         {
             star.position.x = (float)GetRandomValue(0, (int)sp.SCREEN_WIDTH);
             star.position.y = (float)GetRandomValue(0, (int)sp.SCREEN_HEIGHT);
-            star.lum = (float)GetRandomValue(20, 100) / 100.0f;
+            star.lum = (float)GetRandomValue(50, 100) / 100.0f;
             star.size = (float)GetRandomValue(50, 100) / 100.0f;
-            star.shimmerOff = GetRandomValue(0, 10000);
-            star.shimmerFreq = GetRandomValue(30, 100);
-            star.shimmerStre = (float)GetRandomValue(10, 20) / 100.0f;
+            star.shimmerOff = GetRandomValue(0, 1000);
+            star.shimmerPeriod = GetRandomValue(50, 300);
+            star.shimmerStre = (float)GetRandomValue(40, 80) / 100.0f;
         }
     }
-    
+
     // Draw each star
     for (auto& star : stars)
     {
-        // Only shimmer occasionally based on elapsed time
-        auto shimmer =
-            (float)std::cos(
-                (double)(drawFrame + star.shimmerOff) / (double)star.shimmerFreq)
-                * star.shimmerStre;
+        // Use modulo to create a periodic shimmer cycle
+        const auto shimmerAngle =
+            (double)((drawFrame + star.shimmerOff) % star.shimmerPeriod)
+                / (double)star.shimmerPeriod * 2.0 * PI;
+
+        const auto shimmer =
+            ((float)std::cos(shimmerAngle) + 1) * 0.5f * star.shimmerStre;
 
         auto l = std::clamp(star.lum + shimmer, 0.05f, 1.0f);
         auto col = ColorFromNormalized({l, l, l, 1.0f});
