@@ -114,6 +114,13 @@ int main()
 //==================================================================
 static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
 {
+    // Draw neural network visualization
+    //if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)
+    {
+        SimpleNeuralNet net(NETWORK_ARCHITECTURE);
+        DrawNeuralNetwork(net, trainingTask.GetBestNetworkParameters());
+    }
+
     const int fsize = 20;
 
     DrawUIBase(sim, fsize, "ai");
@@ -128,12 +135,5 @@ static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
 
     const double bestScore = trainingTask.GetBestScore();
     DrawText(TextFormat("Best Score: %.2f", bestScore),
-            SCREEN_WIDTH - 300, 70, fsize, bestScore < 100.0f ? GREEN : ORANGE);
-
-    // Draw neural network visualization
-    if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)
-    {
-        SimpleNeuralNet net(NETWORK_ARCHITECTURE);
-        DrawNeuralNetwork(net, trainingTask.GetBestNetworkParameters());
-    }
+            SCREEN_WIDTH - 300, 70, fsize, bestScore > 500.0f ? GREEN : ORANGE);
 }
