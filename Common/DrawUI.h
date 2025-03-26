@@ -7,17 +7,6 @@
 #include "SimpleNeuralNet.h"
 
 //==================================================================
-static Color ColorLerp(Color c1, Color c2, float t)
-{
-    return Color{
-        (unsigned char)std::clamp(c1.r + (c2.r - c1.r) * t, 0.0f, 255.0f),
-        (unsigned char)std::clamp(c1.g + (c2.g - c1.g) * t, 0.0f, 255.0f),
-        (unsigned char)std::clamp(c1.b + (c2.b - c1.b) * t, 0.0f, 255.0f),
-        (unsigned char)std::clamp(c1.a + (c2.a - c1.a) * t, 0.0f, 255.0f)
-    };
-}
-
-//==================================================================
 inline void DrawTextF(const char* text, float x, float y, int fsize, Color color)
 {
     DrawText(TextFormat(text), (int)x, (int)y, fsize, color);

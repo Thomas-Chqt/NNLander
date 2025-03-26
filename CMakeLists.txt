@@ -25,8 +25,12 @@ if (NOT raylib_FOUND)
     FetchContent_Declare(
         raylib
         GIT_REPOSITORY https://github.com/raysan5/raylib.git
-        GIT_TAG 4.5.0
+        GIT_TAG 5.5
+        GIT_SHALLOW ON
     )
+    # Set raylib build options
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build raylib as a static library")
+    set(RAYLIB_BUILD_MODE Release CACHE STRING "Build mode for raylib")
     FetchContent_MakeAvailable(raylib)
 endif()
 
