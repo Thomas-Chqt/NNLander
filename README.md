@@ -98,8 +98,8 @@ NNLander/
 ## Game Controls (for Lander01)
 
 - **Up Arrow**: Apply thrust
-- **Left Arrow**: Rotate counter-clockwise
-- **Right Arrow**: Rotate clockwise
+- **Left Arrow**: Apply left thrust
+- **Right Arrow**: Apply right thrust
 - **Space**: Restart game after landing or crashing
 
 ## Game Objectives
