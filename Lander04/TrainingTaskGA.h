@@ -6,6 +6,7 @@
 #include <numeric>
 #include <future>
 #include <thread>
+#include <limits> // Needed for numeric_limits
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
 
@@ -39,13 +40,19 @@ public:
 class Individual
 {
 public:
-    std::vector<float> parameters;  // Neural network parameters
+    SimpleNeuralNet network; // Neural network object
     double fitness = -std::numeric_limits<double>::max();  // Fitness score (-infinity by default)
 
-    Individual() = default;
+    // Constructor requires architecture
+    Individual(const std::vector<int>& architecture)
+        : network(architecture), fitness(-std::numeric_limits<double>::max()) {}
 
-    Individual(const std::vector<float>& params, double fitnessScore = -std::numeric_limits<double>::max())
-        : parameters(params), fitness(fitnessScore) {}
+    // Constructor with existing network and optional fitness
+    Individual(const SimpleNeuralNet& net, double fitnessScore = -std::numeric_limits<double>::max())
+        : network(net), fitness(fitnessScore) {}
+
+    // Default constructor deleted because network needs architecture
+    Individual() = delete;
 
     // Comparison operator for sorting by fitness (descending order)
     bool operator<(const Individual& other) const {
@@ -95,30 +102,22 @@ public:
         , mPopulationSize(populationSize)
         , mMutationRate(mutationRate)
         , mMutationStrength(mutationStrength)
+        , mBestIndividual(architecture) // Initialize before mRng to match declaration order
         , mRng(seed)
     {
-        // Here we create the initial population, with random parameters
+        // Here we create the initial population, with random networks
 
-        // How many parameters does the network have ?
-        const auto paramsN = SimpleNeuralNet::CalcTotalParameters(mNetworkArchitecture);
-
-        // Create a work buffer for random parameters
-        std::vector<float> paramsWorkBuff(paramsN);
-
-        // Generate random parameters for each individual
-#if USE_XAVIER_INIT
-        std::normal_distribution<float> dist(0.0f, 1.0f / std::sqrt(2.0f));
-#else
-        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-#endif
+        // Generate random networks for each individual
         for (size_t i=0; i < mPopulationSize; ++i)
         {
-            // Generate random parameters in the work buffer
-            for (size_t j=0; j < paramsN; ++j)
-                paramsWorkBuff[j] = dist(mRng);
+            // Create a network with the specified architecture
+            SimpleNeuralNet net(mNetworkArchitecture);
+            // Initialize its parameters randomly (using a different seed for each)
+            // Note: Xavier/He init could be added to InitializeRandomParameters if needed
+            net.InitializeRandomParameters(mRng()); // Use the member RNG
 
-            // Create an individual with the generated parameters
-            mPopulation.emplace_back(paramsWorkBuff);
+            // Create an individual with the generated network
+            mPopulation.emplace_back(net);
         }
     }
 
@@ -152,9 +151,6 @@ public:
     {
         const uint32_t simStartSeed = 1134;
 
-        // General network object (invariant for all individuals)
-        SimpleNeuralNet net(mNetworkArchitecture);
-
         ParallelTasks pt; // Parallelization system
 
         // Evaluate each individual's fitness in parallel
@@ -166,7 +162,8 @@ public:
                 for (size_t i = 0; i < SIM_VARIANTS_N; ++i)
                 {
                     const auto variantSeed = simStartSeed + (uint32_t)i;
-                    sum += TestNetworkOnSimulation(variantSeed, net, individual.parameters);
+                    // Pass the individual's network directly
+                    sum += TestNetworkOnSimulation(variantSeed, individual.network);
                 }
 
                 individual.fitness = sum / (double)SIM_VARIANTS_N;
@@ -238,19 +235,32 @@ public:
     // Crossover two parents to create a child
     Individual Crossover(const Individual& parent1, const Individual& parent2)
     {
+        // Get parameter vectors from parents
+        const auto& params1 = parent1.network.GetParameters();
+        const auto& params2 = parent2.network.GetParameters();
+
+        // Ensure parameter vectors are the same size (should be due to architecture check)
+        if (params1.size() != params2.size())
+             throw std::runtime_error("Parent parameter size mismatch during crossover.");
+
         // Uniform crossover: each parameter has a 50% chance of coming from each parent
-        std::vector<float> childParams(parent1.parameters.size());
+        std::vector<float> childParams(params1.size());
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
         for (size_t i = 0; i < childParams.size(); ++i)
         {
             if (dist(mRng) < 0.5f)
-                childParams[i] = parent1.parameters[i];
+                childParams[i] = params1[i];
             else
-                childParams[i] = parent2.parameters[i];
+                childParams[i] = params2[i];
         }
 
-        return Individual(childParams);
+        // Create a new network for the child and set its parameters
+        SimpleNeuralNet childNet(mNetworkArchitecture);
+        childNet.SetParameters(childParams);
+
+        // Return a new individual containing the child network
+        return Individual(childNet);
     }
 
     //==================================================================
@@ -269,36 +279,44 @@ public:
     // Mutate an individual
     void mutate(Individual& individual)
     {
+        // Get a mutable copy of the parameters
+        std::vector<float> params = individual.network.GetParameters();
+
         std::uniform_real_distribution<float> shouldMutate(0.0f, 1.0f);
 #if USE_MUTATION_STDDEV
-        auto [mean, stdDev] = calcMeanAndStdDev(individual.parameters);
-        std::normal_distribution<float> mutation(mean, stdDev);
+        auto [mean, stdDev] = calcMeanAndStdDev(params); // Calculate on current params
+        std::normal_distribution<float> mutationDist(mean, stdDev);
 #else
-        std::normal_distribution<float> mutation(0.0f, (float)mMutationStrength);
+        std::normal_distribution<float> mutationDist(0.0f, (float)mMutationStrength);
 #endif
-        for (float& param : individual.parameters)
+        bool mutated = false;
+        for (float& param : params)
         {
             // Each parameter has a chance to mutate
             if (shouldMutate(mRng) < mMutationRate)
             {
                 // Add a normally distributed random value
-                param += mutation(mRng);
-                // Clamp to [-1, 1] range
+                param += mutationDist(mRng);
+                // Clamp to [-1, 1] range (or other appropriate range if needed)
                 param = std::clamp(param, -1.0f, 1.0f);
+                mutated = true;
             }
         }
+
+        // If any parameter was mutated, update the network
+        if (mutated)
+            individual.network.SetParameters(params);
     }
 
     //==================================================================
     // Test a network on a simulation
     // - "seed" gives the simulation variant to test
-    // - "params" are the weights and biases of the network to test
-    // Returns the score of the simulation with the given parameters
+    // - "net" is the network to test
+    // Returns the score of the simulation with the given network
     //==================================================================
     double TestNetworkOnSimulation(
         uint32_t simulationSeed,
-        const SimpleNeuralNet& net,
-        const std::vector<float>& params) const
+        const SimpleNeuralNet& net) const
     {
         // Create a simulation with the given seed
         Simulation sim(mSimParams, simulationSeed);
@@ -309,8 +327,8 @@ public:
             // Step the simulation forward...
             sim.AnimateSim([&](const float* states, float* actions)
             {
-                // states -> net(params) -> actions
-                net.FeedForward(params.data(), states, actions);
+                // states -> net -> actions
+                net.FeedForward(states, actions);
             });
         }
         // Return the score of the simulation
@@ -323,7 +341,10 @@ public:
     double GetBestScore() const { return mBestIndividual.fitness; }
     size_t GetPopulationSize() const { return mPopulationSize; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mMaxGenerations; }
-    const std::vector<float>& GetBestNetworkParameters() const { return mBestIndividual.parameters; }
+    // Get the parameters of the best network found so far
+    const std::vector<float>& GetBestNetworkParameters() const { return mBestIndividual.network.GetParameters(); }
+    // Get the best network object found so far
+    const SimpleNeuralNet& GetBestIndividualNetwork() const { return mBestIndividual.network; }
     const std::vector<Individual>& GetPopulation() const { return mPopulation; }
 };
 

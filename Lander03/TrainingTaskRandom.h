@@ -3,6 +3,7 @@
 
 #include <random>
 #include <algorithm>
+#include <limits> // Needed for numeric_limits
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
 
@@ -19,7 +20,7 @@ private:
     size_t             mMaxEpochs = 0 ;
     size_t             mCurrentEpoch = 0;
     double             mBestScore = -std::numeric_limits<double>::max();
-    std::vector<float> mBestNetworkParameters;
+    SimpleNeuralNet    mBestNetwork; // Store the best network object
 
 public:
     TrainingTaskRandom(
@@ -29,6 +30,7 @@ public:
         : mSimParams(sp)
         , mNetworkArchitecture(architecture)
         , mMaxEpochs(maxEpochs)
+        , mBestNetwork(architecture) // Initialize best network with architecture
     {}
 
     //==================================================================
@@ -38,22 +40,22 @@ public:
     // If the network is better than our current best, we save it.
     void RunIteration()
     {
-        // Create the network structure
+        // Create a network for this iteration
         SimpleNeuralNet net(mNetworkArchitecture);
         // A different seed for each epoch, to generate different random parameters
         const uint32_t networkSeed = (uint32_t)(mCurrentEpoch + 1111);
-        // Generate random parameters for this new network
-        const auto params = generateRandomParameters(net, networkSeed);
+        // Initialize the network with random parameters
+        net.InitializeRandomParameters(networkSeed);
 
         // Random seed for the simulation
         const uint32_t simulationSeed = 1134;
         // Test the network on the simulation to get a score
-        const auto currentScore = TestNetworkOnSimulation(simulationSeed, net, params);
+        const auto currentScore = TestNetworkOnSimulation(simulationSeed, net);
         // If this network is better than our current best, save it
         if (currentScore > mBestScore)
         {
             mBestScore = currentScore;
-            mBestNetworkParameters = params;
+            mBestNetwork = net; // Save the whole network object
         }
 
         // Increment the training epoch counter
@@ -63,13 +65,12 @@ public:
     //==================================================================
     // Test a network on a simulation
     // - "seed" gives the simulation variant to test
-    // - "params" are the weights and biases of the network to test
-    // Returns the score of the simulation with the given parameters
+    // - "net" is the network to test
+    // Returns the score of the simulation with the given network
     //==================================================================
     double TestNetworkOnSimulation(
         uint32_t simulationSeed,
-        const SimpleNeuralNet& net,
-        const std::vector<float>& params) const
+        const SimpleNeuralNet& net) const
     {
         // Create a simulation with the given seed
         Simulation sim(mSimParams, simulationSeed);
@@ -80,29 +81,18 @@ public:
             // Step the simulation forward...
             sim.AnimateSim([&](const float* states, float* actions)
             {
-                // states -> net(params) -> actions
-                net.FeedForward(params.data(), states, actions);
+                // states -> net -> actions
+                net.FeedForward(states, actions);
             });
         }
         // Return the score of the simulation
         return sim.CalculateScore();
     }
 
-    // Generate random parameters for neural network
-    static std::vector<float> generateRandomParameters(const SimpleNeuralNet& net, uint32_t seed)
-    {
-        // Use a random number generator between -1.0 and 1.0
-        std::mt19937 rng(seed);
-        std::uniform_real_distribution<float> dist(-1.0f, 1.0f);
-        // Generate random parameters
-        std::vector<float> params(net.GetTotalParameters());
-        for (size_t i = 0; i < params.size(); ++i)
-            params[i] = dist(rng);
-
-        return params;
-    }
-
-    const auto& GetBestNetworkParameters() const { return mBestNetworkParameters; }
+    // Get the parameters of the best network found so far
+    const std::vector<float>& GetBestNetworkParameters() const { return mBestNetwork.GetParameters(); }
+    // Get the best network object found so far
+    const SimpleNeuralNet& GetBestNetwork() const { return mBestNetwork; }
 
     // Getters for training status
     size_t GetCurrentEpoch() const { return mCurrentEpoch; }

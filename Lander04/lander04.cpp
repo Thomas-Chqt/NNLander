@@ -114,10 +114,12 @@ int main()
         {
             // Animate the simulation with the neural network brain
             const auto& bestParams = trainingTask.GetBestNetworkParameters();
+            // Update the testNet with the latest best parameters before using it
+            testNet.SetParameters(bestParams);
             sim.AnimateSim([&](const float* states, float* actions)
             {
-                // states -> testNet(bestParams) -> actions
-                testNet.FeedForward(bestParams.data(), states, actions);
+                // states -> testNet -> actions
+                testNet.FeedForward(states, actions); // Use the network's internal parameters
             });
         }
 

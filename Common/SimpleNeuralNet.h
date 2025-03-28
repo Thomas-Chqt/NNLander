@@ -4,16 +4,19 @@
 #include <vector>
 #include <algorithm>
 #include <cmath>
+#include <random> // Needed for InitializeRandomParameters
+#include <stdexcept> // Needed for runtime_error
 
 //==================================================================
 class SimpleNeuralNet
 {
     const std::vector<int> mArchitecture; // Network architecture (nodes per layer)
+    std::vector<float> mParameters;       // Network parameters (weights and biases)
     size_t mTotalParameters = 0;          // Total number of parameters in the network
     size_t mMaxLayerSize = 0;             // Maximum number of neurons in any layer
 public:
 /*
-The constructor takes pointers to weights (weights and biases) and the
+The constructor takes the network architecture.
 network architecture.
 The network architecture tells how many layers there are and how many
 neurons per layer.
@@ -47,9 +50,33 @@ The example below is just for illustration.
     {
         // Calculate total number of parameters needed
         mTotalParameters = CalcTotalParameters(mArchitecture);
+        // Resize the parameters vector
+        mParameters.resize(mTotalParameters);
 
         // Find the maximum number of neurons in any layer
         mMaxLayerSize = *std::max_element(mArchitecture.begin(), mArchitecture.end());
+    }
+
+    // Copy constructor (explicitly defined due to user-defined copy assignment)
+    SimpleNeuralNet(const SimpleNeuralNet& other)
+        : mArchitecture(other.mArchitecture), // Copy const architecture
+          mParameters(other.mParameters),     // Copy parameters vector
+          mTotalParameters(other.mTotalParameters),
+          mMaxLayerSize(other.mMaxLayerSize)
+    {}
+
+    // Copy assignment operator
+    SimpleNeuralNet& operator=(const SimpleNeuralNet& other) {
+        if (this == &other) { // Handle self-assignment
+            return *this;
+        }
+        // Ensure architectures are compatible before assigning parameters
+        if (mArchitecture != other.mArchitecture) {
+             throw std::runtime_error("Cannot assign SimpleNeuralNet with different architectures.");
+        }
+        mParameters = other.mParameters; // Copy parameters
+        // mArchitecture, mTotalParameters, mMaxLayerSize are const or derived, no need to copy
+        return *this;
     }
 
     // Given the architecture, calculate the total number of parameters
@@ -65,10 +92,16 @@ The example below is just for illustration.
     // Feed forward function
     // This function builds a net with the given Parameters and then
     // applies the Inputs to the net to get the Outputs.
-    // inputs -> net(parameters) -> outputs
+    // inputs -> net -> outputs
     //==================================================================
-    void FeedForward(const float* pParameters, const float* pInputs, float* pOutputs) const
+    void FeedForward(const float* pInputs, float* pOutputs) const
     {
+        // Ensure parameters are loaded
+        if (mParameters.empty() || mParameters.size() != mTotalParameters) {
+            throw std::runtime_error("Network parameters not initialized or incorrect size.");
+        }
+        const float* pParameters = mParameters.data();
+
         // Allocate buffers on the stack to avoid touching the heap
         float* lay0_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
         float* lay1_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
@@ -116,9 +149,31 @@ The example below is just for illustration.
     // Get total number of parameters (weights + biases)
     size_t GetTotalParameters() const { return mTotalParameters; }
 
+    // Set the network parameters
+    void SetParameters(const std::vector<float>& params)
+    {
+        if (params.size() != mTotalParameters) {
+            throw std::runtime_error("Parameter vector size mismatch.");
+        }
+        mParameters = params;
+    }
+
+    // Get the network parameters
+    const std::vector<float>& GetParameters() const { return mParameters; }
+
+    // Initialize parameters with random values
+    void InitializeRandomParameters(uint32_t seed, float minVal = -1.0f, float maxVal = 1.0f)
+    {
+        std::mt19937 rng(seed);
+        std::uniform_real_distribution<float> dist(minVal, maxVal);
+        for (size_t i = 0; i < mTotalParameters; ++i) {
+            mParameters[i] = dist(rng);
+        }
+    }
+
 private:
     float Activate(float x) const { return x > 0.0f ? x : 0.0f; } // ReLU
     //float Activate(float x) const { return x > 0.0f ? x : 0.01f * x; } // Leaky ReLU
 };
 
-#endif 
+#endif
