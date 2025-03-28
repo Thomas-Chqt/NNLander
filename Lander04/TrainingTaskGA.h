@@ -10,7 +10,6 @@
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
 
-#define USE_XAVIER_INIT 1
 #define USE_MUTATION_STDDEV 0
 
 //==================================================================
