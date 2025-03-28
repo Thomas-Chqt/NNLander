@@ -89,8 +89,6 @@ public:
         return sim.CalculateScore();
     }
 
-    // Get the parameters of the best network found so far
-    const std::vector<float>& GetBestNetworkParameters() const { return mBestNetwork.GetParameters(); }
     // Get the best network object found so far
     const SimpleNeuralNet& GetBestNetwork() const { return mBestNetwork; }
 

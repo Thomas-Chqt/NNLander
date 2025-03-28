@@ -235,29 +235,41 @@ public:
     // Crossover two parents to create a child
     Individual Crossover(const Individual& parent1, const Individual& parent2)
     {
-        // Get parameter vectors from parents
-        const auto& params1 = parent1.network.GetParameters();
-        const auto& params2 = parent2.network.GetParameters();
+        // Get layer parameter structures from parents
+        const auto& layers1 = parent1.network.GetLayerParameters();
+        const auto& layers2 = parent2.network.GetLayerParameters();
 
-        // Ensure parameter vectors are the same size (should be due to architecture check)
-        if (params1.size() != params2.size())
-             throw std::runtime_error("Parent parameter size mismatch during crossover.");
+        // Ensure layer structures are compatible (basic size check)
+        assert(layers1.size() == layers2.size());
 
-        // Uniform crossover: each parameter has a 50% chance of coming from each parent
-        std::vector<float> childParams(params1.size());
+        // Create a structure for the child's layer parameters, initialized from parent1
+        std::vector<LayerParameters> childLayers = layers1;
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
-        for (size_t i = 0; i < childParams.size(); ++i)
+        // Iterate through layers and perform uniform crossover for weights and biases
+        for (size_t i = 0; i < childLayers.size(); ++i)
         {
-            if (dist(mRng) < 0.5f)
-                childParams[i] = params1[i];
-            else
-                childParams[i] = params2[i];
+            // Crossover weights
+            assert(layers1[i].weights.size() == layers2[i].weights.size());
+            for (size_t j = 0; j < childLayers[i].weights.size(); ++j)
+            {
+                if (dist(mRng) >= 0.5f) // Take from parent2 with 50% chance
+                    childLayers[i].weights[j] = layers2[i].weights[j];
+                // Otherwise, it keeps the value from parent1 (already copied)
+            }
+
+            // Crossover biases
+            assert(layers1[i].biases.size() == layers2[i].biases.size());
+            for (size_t j = 0; j < childLayers[i].biases.size(); ++j)
+            {
+                if (dist(mRng) >= 0.5f) // Take from parent2 with 50% chance
+                    childLayers[i].biases[j] = layers2[i].biases[j];
+            }
         }
 
-        // Create a new network for the child and set its parameters
+        // Create a new network for the child and set its layer parameters
         SimpleNeuralNet childNet(mNetworkArchitecture);
-        childNet.SetParameters(childParams);
+        childNet.SetLayerParameters(childLayers);
 
         // Return a new individual containing the child network
         return Individual(childNet);
@@ -279,33 +291,32 @@ public:
     // Mutate an individual
     void mutate(Individual& individual)
     {
-        // Get a mutable copy of the parameters
-        std::vector<float> params = individual.network.GetParameters();
+        // Get a mutable reference to the layer parameters
+        std::vector<LayerParameters>& layers = individual.network.GetLayerParameters();
 
-        std::uniform_real_distribution<float> shouldMutate(0.0f, 1.0f);
-#if USE_MUTATION_STDDEV
-        auto [mean, stdDev] = calcMeanAndStdDev(params); // Calculate on current params
-        std::normal_distribution<float> mutationDist(mean, stdDev);
-#else
-        std::normal_distribution<float> mutationDist(0.0f, (float)mMutationStrength);
-#endif
-        bool mutated = false;
-        for (float& param : params)
-        {
-            // Each parameter has a chance to mutate
-            if (shouldMutate(mRng) < mMutationRate)
-            {
-                // Add a normally distributed random value
-                param += mutationDist(mRng);
-                // Clamp to [-1, 1] range (or other appropriate range if needed)
-                param = std::clamp(param, -1.0f, 1.0f);
-                mutated = true;
+        std::uniform_real_distribution<float> shouldMutateDist(0.0f, 1.0f);
+        // Note: USE_MUTATION_STDDEV is not easily adaptable here without recalculating stddev per layer/parameter type
+        // Sticking to the simpler mutation strength for now.
+        std::normal_distribution<float> mutationValueDist(0.0f, (float)mMutationStrength);
+
+        // Iterate through layers, weights, and biases
+        for (auto& layer : layers) {
+            // Mutate weights
+            for (float& weight : layer.weights) {
+                if (shouldMutateDist(mRng) < mMutationRate) {
+                    weight += mutationValueDist(mRng);
+                    weight = std::clamp(weight, -1.0f, 1.0f); // Clamp
+                }
+            }
+            // Mutate biases
+            for (float& bias : layer.biases) {
+                if (shouldMutateDist(mRng) < mMutationRate) {
+                    bias += mutationValueDist(mRng);
+                    bias = std::clamp(bias, -1.0f, 1.0f); // Clamp
+                }
             }
         }
-
-        // If any parameter was mutated, update the network
-        if (mutated)
-            individual.network.SetParameters(params);
+        // No need to call SetLayerParameters as we modified the layers via reference
     }
 
     //==================================================================
@@ -341,8 +352,6 @@ public:
     double GetBestScore() const { return mBestIndividual.fitness; }
     size_t GetPopulationSize() const { return mPopulationSize; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mMaxGenerations; }
-    // Get the parameters of the best network found so far
-    const std::vector<float>& GetBestNetworkParameters() const { return mBestIndividual.network.GetParameters(); }
     // Get the best network object found so far
     const SimpleNeuralNet& GetBestIndividualNetwork() const { return mBestIndividual.network; }
     const std::vector<Individual>& GetPopulation() const { return mPopulation; }

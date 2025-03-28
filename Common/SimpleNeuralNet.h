@@ -6,14 +6,24 @@
 #include <cmath>
 #include <random> // Needed for InitializeRandomParameters
 #include <stdexcept> // Needed for runtime_error
+#include <numeric>   // Needed for accumulate in GetFlatParameters
+#include <cassert>   // For assert
+
+//==================================================================
+// Structure to hold parameters for a single layer transition
+struct LayerParameters
+{
+    std::vector<float> weights; // Matrix: rows=currentLayerSize, cols=prevLayerSize
+    std::vector<float> biases;  // Vector: size=currentLayerSize
+};
 
 //==================================================================
 class SimpleNeuralNet
 {
-    const std::vector<int> mArchitecture; // Network architecture (nodes per layer)
-    std::vector<float> mParameters;       // Network parameters (weights and biases)
-    size_t mTotalParameters = 0;          // Total number of parameters in the network
-    size_t mMaxLayerSize = 0;             // Maximum number of neurons in any layer
+    const std::vector<int> mArchitecture;     // Network architecture (nodes per layer)
+    std::vector<LayerParameters> mLayerParams; // Parameters per layer transition
+    size_t mMaxLayerSize = 0;                 // Maximum number of neurons in any layer
+
 public:
 /*
 The constructor takes the network architecture.
@@ -48,34 +58,42 @@ The example below is just for illustration.
     SimpleNeuralNet(const std::vector<int>& architecture)
         : mArchitecture(architecture)
     {
-        // Calculate total number of parameters needed
-        mTotalParameters = CalcTotalParameters(mArchitecture);
-        // Resize the parameters vector
-        mParameters.resize(mTotalParameters);
+        if (architecture.size() < 2) {
+            throw std::runtime_error("Network architecture must have at least 2 layers (input and output).");
+        }
+
+        // Resize the layer parameters vector (one less than num layers)
+        mLayerParams.resize(mArchitecture.size() - 1);
+
+        // Initialize weights and biases vectors for each layer transition
+        for (size_t i = 0; i < mLayerParams.size(); ++i) {
+            int prevLayerSize = mArchitecture[i];
+            int currentLayerSize = mArchitecture[i + 1];
+            mLayerParams[i].weights.resize(prevLayerSize * currentLayerSize);
+            mLayerParams[i].biases.resize(currentLayerSize);
+        }
 
         // Find the maximum number of neurons in any layer
         mMaxLayerSize = *std::max_element(mArchitecture.begin(), mArchitecture.end());
     }
 
-    // Copy constructor (explicitly defined due to user-defined copy assignment)
+    // Copy constructor
     SimpleNeuralNet(const SimpleNeuralNet& other)
-        : mArchitecture(other.mArchitecture), // Copy const architecture
-          mParameters(other.mParameters),     // Copy parameters vector
-          mTotalParameters(other.mTotalParameters),
+        : mArchitecture(other.mArchitecture),     // Copy const architecture
+          mLayerParams(other.mLayerParams),       // Copy layer parameters vector (deep copy)
           mMaxLayerSize(other.mMaxLayerSize)
     {}
 
     // Copy assignment operator
-    SimpleNeuralNet& operator=(const SimpleNeuralNet& other) {
-        if (this == &other) { // Handle self-assignment
+    SimpleNeuralNet& operator=(const SimpleNeuralNet& other)
+    {
+        if (this == &other) // Handle self-assignment
             return *this;
-        }
+
         // Ensure architectures are compatible before assigning parameters
-        if (mArchitecture != other.mArchitecture) {
-             throw std::runtime_error("Cannot assign SimpleNeuralNet with different architectures.");
-        }
-        mParameters = other.mParameters; // Copy parameters
-        // mArchitecture, mTotalParameters, mMaxLayerSize are const or derived, no need to copy
+        assert(mArchitecture == other.mArchitecture);
+        mLayerParams = other.mLayerParams; // Copy layer parameters (deep copy)
+        // mArchitecture, mMaxLayerSize are const or derived, no need to copy
         return *this;
     }
 
@@ -96,11 +114,8 @@ The example below is just for illustration.
     //==================================================================
     void FeedForward(const float* pInputs, float* pOutputs) const
     {
-        // Ensure parameters are loaded
-        if (mParameters.empty() || mParameters.size() != mTotalParameters) {
-            throw std::runtime_error("Network parameters not initialized or incorrect size.");
-        }
-        const float* pParameters = mParameters.data();
+        // Basic check if layer params structure seems initialized
+        assert(mLayerParams.size() == (mArchitecture.size() - 1));
 
         // Allocate buffers on the stack to avoid touching the heap
         float* lay0_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
@@ -110,28 +125,42 @@ The example below is just for illustration.
         for (int i=0; i < mArchitecture[0]; ++i)
             lay0_outs[i] = pInputs[i];
 
-        // Parameter index tracker
-        int paramIdx = 0;
-
-        // Process each layer
-        for (size_t lay_1=1; lay_1 < mArchitecture.size(); ++lay_1)
+        // Process each layer transition
+        for (size_t i = 0; i < mLayerParams.size(); ++i)
         {
-            const auto lay1_n = mArchitecture[lay_1];
-            const auto lay0_n = mArchitecture[lay_1-1];
+            const auto& currentLayerParams = mLayerParams[i];
+            const int prevLayerSize = mArchitecture[i];
+            const int currentLayerSize = mArchitecture[i + 1];
+
+            // Check if the specific layer parameters seem valid
+            assert(currentLayerParams.weights.size() == (size_t)(prevLayerSize * currentLayerSize));
+            assert(currentLayerParams.biases.size() == (size_t)currentLayerSize);
+
+
+            const float* weights = currentLayerParams.weights.data();
+            const float* biases = currentLayerParams.biases.data();
+            // int weightIdx = 0; // Unused variable
 
             // For each neuron in the current layer
-            for (int n1=0; n1 < lay1_n; ++n1)
+            for (int n1 = 0; n1 < currentLayerSize; ++n1)
             {
                 // Sum weighted inputs
                 auto sum = 0.0f;
-                for (int n0=0; n0 < lay0_n; ++n0)
-                    sum += lay0_outs[n0] * pParameters[paramIdx++];
-                sum += pParameters[paramIdx++]; // Add bias
+                for (int n0 = 0; n0 < prevLayerSize; ++n0)
+                {
+                    // Access weights matrix (row-major: n1 * prevLayerSize + n0 or
+                    //                        col-major: n0 * currentLayerSize + n1)
+                    // Assuming weights stored row-major (neuron in current layer is row index)
+                    sum += lay0_outs[n0] * weights[n1 * prevLayerSize + n0];
+                    // If col-major: sum += lay0_outs[n0] * weights[n0 * currentLayerSize + n1];
+                }
+                sum += biases[n1]; // Add bias for this neuron
 
-                lay1_outs[n1] = sum; // Store
+                lay1_outs[n1] = sum; // Store intermediate result
             }
-            // Apply activation function to each neuron (faster to do here than in the loop)
-            for (int n1=0; n1 < lay1_n; ++n1)
+
+            // Apply activation function to all neurons in the current layer
+            for (int n1 = 0; n1 < currentLayerSize; ++n1)
                 lay1_outs[n1] = Activate(lay1_outs[n1]);
 
             // Swap buffers, next-layer output becomes current-layer output
@@ -146,28 +175,31 @@ The example below is just for illustration.
     // Get the architecture of the network
     const auto& GetArchitecture() const { return mArchitecture; }
 
-    // Get total number of parameters (weights + biases)
-    size_t GetTotalParameters() const { return mTotalParameters; }
-
-    // Set the network parameters
-    void SetParameters(const std::vector<float>& params)
+    // Set the network parameters from layer structure
+    void SetLayerParameters(const std::vector<LayerParameters>& layerParams)
     {
-        if (params.size() != mTotalParameters) {
-            throw std::runtime_error("Parameter vector size mismatch.");
-        }
-        mParameters = params;
+        assert(layerParams.size() == mLayerParams.size());
+        // Could add more detailed size checks per layer here if needed
+        mLayerParams = layerParams;
     }
 
-    // Get the network parameters
-    const std::vector<float>& GetParameters() const { return mParameters; }
+    // Get the network parameters as layer structure
+    const std::vector<LayerParameters>& GetLayerParameters() const { return mLayerParams; }
+     // Get mutable access for mutation (use with caution)
+    std::vector<LayerParameters>& GetLayerParameters() { return mLayerParams; }
 
     // Initialize parameters with random values
     void InitializeRandomParameters(uint32_t seed, float minVal = -1.0f, float maxVal = 1.0f)
     {
         std::mt19937 rng(seed);
         std::uniform_real_distribution<float> dist(minVal, maxVal);
-        for (size_t i = 0; i < mTotalParameters; ++i) {
-            mParameters[i] = dist(rng);
+
+        for (auto& layer : mLayerParams)
+        {
+            for (float& weight : layer.weights)
+                weight = dist(rng);
+            for (float& bias : layer.biases)
+                bias = dist(rng);
         }
     }
 

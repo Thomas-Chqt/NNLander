@@ -72,9 +72,9 @@ inline void DrawUITrainingStatus(bool isTrainingComplete, int fsize)
 }
 
 //==================================================================
-inline void DrawNeuralNetwork(
-    const SimpleNeuralNet& net,
-    const std::vector<float>& params)
+// Draws the neural network structure and connection weights.
+// Assumes weights are stored row-major in LayerParameters.
+inline void DrawNeuralNetwork(const SimpleNeuralNet& net)
 {
     //const float screenW = (float)GetScreenWidth();
     //const float screenH = (float)GetScreenHeight();
@@ -88,16 +88,18 @@ inline void DrawNeuralNetwork(
     const int fsize = 15;
 
     const auto& architecture = net.GetArchitecture();
+    const auto& layerParams = net.GetLayerParameters(); // Get layer-based parameters
 
     // Draw connections first (so they appear behind nodes)
-    int paramIdx = 0;
     float prevLayerY = startY;
-    auto prevLayerNodes = architecture[0];
+    auto prevLayerNodes = architecture[0]; // Use int for consistency with loop types
 
-    for (size_t layer = 1; layer < architecture.size(); ++layer)
+    for (size_t layerIdx=0; layerIdx < layerParams.size(); ++layerIdx) // Loop through layer transitions
     {
-        float currLayerY = startY + layer * layerSpacing;
-        const auto currLayerNodes = architecture[layer];
+        const auto& currentLayerParams = layerParams[layerIdx];
+        const auto* pWeights = currentLayerParams.weights.data();
+        const auto currLayerNodes = architecture[layerIdx + 1];
+        const auto currLayerY = startY + (float)(layerIdx + 1) * layerSpacing;
 
         // Calculate vertical offset to center the layer
         float prevOffset = (float)(prevLayerNodes - 1) * nodeSpacing / 2;
@@ -114,11 +116,12 @@ inline void DrawNeuralNetwork(
                 const auto currX = startX + (float)currNode * nodeSpacing - currOffset;
                 const auto currY = currLayerY;
 
-                // Get weight value and normalize it to [-1, 1] range
-                float weight = params[paramIdx++];
-                weight = std::clamp(weight, -1.0f, 1.0f);
+                // Get weight value directly from the layer's weights vector
+                // Assuming row-major: weights[currNode * prevLayerNodes + prevNode]
+                float weight = pWeights[currNode * prevLayerNodes + prevNode];
+                weight = std::clamp(weight, -1.0f, 1.0f); // Clamp for color mapping
 
-                // Color based on weight value using lerp between blue (-1) and red (+1)
+                // Color based on weight value using lerp between red (-1) and blue (+1)
                 float t = (weight + 1.0f) * 0.5f; // Convert from [-1,1] to [0,1]
                 Color lineColor = ColorLerp(Color{255,0,0,255}, Color{0,0,255,255}, t);
                 lineColor.a = 128;//(unsigned char)(std::abs(weight) * 255.0f); // Alpha based on weight magnitude

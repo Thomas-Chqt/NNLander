@@ -56,9 +56,7 @@ int main()
     // Create the training task
     TrainingTaskRandom trainingTask(sp, NETWORK_ARCHITECTURE, MAX_TRAINING_EPOCHS);
 
-    // Neural net object used for testing (will use the best params as they come
-    // from the ongoing training)
-    SimpleNeuralNet testNet(NETWORK_ARCHITECTURE);
+    // No separate testNet needed, we'll use the one inside trainingTask
 
     float restartTimer = 0.0f;
 
@@ -86,14 +84,11 @@ int main()
         }
         else
         {
-            // Animate the simulation with the neural network brain
-            const auto& bestParams = trainingTask.GetBestNetworkParameters();
-            // Update the testNet with the latest best parameters before using it
-            testNet.SetParameters(bestParams);
+            // Animate the simulation using the best network from the training task
             sim.AnimateSim([&](const float* states, float* actions)
             {
-                // states -> testNet -> actions
-                testNet.FeedForward(states, actions); // Use the network's internal parameters
+                // states -> bestNet -> actions
+                trainingTask.GetBestNetwork().FeedForward(states, actions);
             });
         }
 
@@ -122,8 +117,10 @@ static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
     // Draw neural network visualization
     //if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)
     {
-        SimpleNeuralNet net(NETWORK_ARCHITECTURE);
-        DrawNeuralNetwork(net, trainingTask.GetBestNetworkParameters());
+        // Use the actual best network from the training task for visualization
+        const auto& bestNet = trainingTask.GetBestNetwork();
+        // Pass the flattened parameters to the drawing function
+        DrawNeuralNetwork(bestNet);
     }
 
     const int fsize = 20;
