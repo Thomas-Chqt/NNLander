@@ -179,6 +179,11 @@ The example below is just for illustration.
     // Get the architecture of the network
     const auto& GetArchitecture() const { return mArchitecture; }
 
+    // Get the total number of parameters (weights + biases) in the network
+    size_t GetTotalParameterCount() const {
+        return CalcTotalParameters(mArchitecture);
+    }
+
     // Set the network parameters from layer structure
     void SetLayerParameters(const std::vector<LayerParameters>& layerParams)
     {

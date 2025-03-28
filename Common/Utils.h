@@ -1,6 +1,7 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+//==================================================================
 #include <cassert>
 #include <cstdint>
 
@@ -31,5 +32,40 @@ inline float FastRandomRange(uint64_t& state, float min, float max)
 {
     return min + (max - min) * FastRandomFloat(state);
 }
+
+//==================================================================
+// ParallelTasks class - handles parallel execution of tasks
+//==================================================================
+#include <future>
+#include <thread>
+
+class ParallelTasks
+{
+    std::vector<std::future<void>> mFutures;
+    unsigned int mThreadsN {};
+public:
+    ParallelTasks() : mThreadsN(std::thread::hardware_concurrency()) {}
+
+    void AddTask(std::function<void()> task)
+    {
+        if (mFutures.size() >= mThreadsN)
+        {
+            mFutures.front().wait();
+            mFutures.erase(mFutures.begin());
+        }
+        mFutures.push_back(std::async(std::launch::async, task));
+    }
+
+    // Wait for all pending tasks to complete
+    void WaitAll()
+    {
+        for (auto& future : mFutures)
+        {
+            if (future.valid())
+                future.wait();
+        }
+        mFutures.clear();
+    }
+};
 
 #endif

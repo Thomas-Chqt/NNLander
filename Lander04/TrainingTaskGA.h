@@ -4,34 +4,12 @@
 #include <random>
 #include <algorithm>
 #include <numeric>
-#include <future>
-#include <thread>
 #include <limits> // Needed for numeric_limits
+#include "Utils.h"
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
 
 #define USE_MUTATION_STDDEV 0
-
-//==================================================================
-// ParallelTasks class - handles parallel execution of tasks
-//==================================================================
-class ParallelTasks
-{
-    std::vector<std::future<void>> mFutures;
-    unsigned int mThreadsN {};
-public:
-    ParallelTasks() : mThreadsN(std::thread::hardware_concurrency()) {}
-
-    void AddTask(std::function<void()> task)
-    {
-        if (mFutures.size() >= mThreadsN)
-        {
-            mFutures.front().wait();
-            mFutures.erase(mFutures.begin());
-        }
-        mFutures.push_back(std::async(std::launch::async, task));
-    }
-};
 
 //==================================================================
 // Individual class - represents a single member of the population
