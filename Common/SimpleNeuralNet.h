@@ -9,6 +9,10 @@
 #include <numeric>   // Needed for accumulate in GetFlatParameters
 #include <cassert>   // For assert
 
+#define SNN_INIT_RANDOM_UNIFORM 0
+#define SNN_INIT_HE_NORMAL 0
+#define SNN_INIT_XAVIER_UNIFORM 1
+
 //==================================================================
 // Structure to hold parameters for a single layer transition
 struct LayerParameters
@@ -191,6 +195,8 @@ The example below is just for illustration.
     // Initialize parameters with random values
     void InitializeRandomParameters(uint32_t seed, float minVal = -1.0f, float maxVal = 1.0f)
     {
+        (void)minVal; (void)maxVal;
+#if SNN_INIT_RANDOM_UNIFORM
         std::mt19937 rng(seed);
         std::uniform_real_distribution<float> dist(minVal, maxVal);
 
@@ -201,6 +207,46 @@ The example below is just for illustration.
             for (float& bias : layer.biases)
                 bias = dist(rng);
         }
+#elif SNN_INIT_HE_NORMAL
+        std::mt19937 rng(seed);
+        // Initialize weights and biases layer by layer
+        for (size_t layerIdx = 0; layerIdx < mLayerParams.size(); ++layerIdx)
+        {
+            // --- Initialize Weights (He Normal) ---
+            auto fan_in = mArchitecture[layerIdx];
+            // Avoid division by zero if a layer has 0 inputs (shouldn't happen in valid architecture)
+            float stddev = (fan_in > 0) ? std::sqrt(2.0f / (float)fan_in) : 0.0f;
+            std::normal_distribution<float> weight_dist(0.0f, stddev);
+
+            auto& layer_weights = mLayerParams[layerIdx].weights;
+            for (float& w : layer_weights)
+                w = weight_dist(rng);
+
+            // --- Initialize Biases (Zero) ---
+            for (float& b : mLayerParams[layerIdx].biases)
+                b = 0.0f;
+        }
+#elif SNN_INIT_XAVIER_UNIFORM
+        std::mt19937 rng(seed);
+        // Initialize weights and biases layer by layer
+        for (size_t layerIdx = 0; layerIdx < mLayerParams.size(); ++layerIdx)
+        {
+            // --- Initialize Weights (Xavier Uniform) ---
+            auto fan_in = mArchitecture[layerIdx];
+            auto fan_out = mArchitecture[layerIdx + 1];
+            // Calculate the range limit for Xavier uniform initialization
+            float limit = (fan_in + fan_out > 0) ? std::sqrt(6.0f / (float)(fan_in + fan_out)) : 0.0f;
+            std::uniform_real_distribution<float> weight_dist(-limit, limit);
+
+            auto& layer_weights = mLayerParams[layerIdx].weights;
+            for (float& w : layer_weights)
+                w = weight_dist(rng);
+
+            // --- Initialize Biases (Zero) ---
+            for (float& b : mLayerParams[layerIdx].biases)
+                b = 0.0f;
+        }
+#endif
     }
 
 private:
