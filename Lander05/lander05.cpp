@@ -59,14 +59,13 @@ int main()
     Simulation sim(sp, seed);
 
     // Create the training task
-    TrainingTaskRES trainingTask( // Use RES task
-        sp,
-        NETWORK_ARCHITECTURE,
-        MAX_TRAINING_GENERATIONS,
-        SIGMA,
-        ALPHA,
-        NUM_PERTURBATIONS
-    );
+    TrainingTaskRES::Params par;
+    par.architecture = NETWORK_ARCHITECTURE;
+    par.maxGenerations = MAX_TRAINING_GENERATIONS;
+    par.sigma = SIGMA;
+    par.alpha = ALPHA;
+    par.numPerturbations = NUM_PERTURBATIONS;
+    TrainingTaskRES trainingTask(par, sp);
 
     // We'll use the central network from trainingTask
 

@@ -18,16 +18,20 @@
 //==================================================================
 class TrainingTaskRES
 {
+public:
+    struct Params
+    {
+        std::vector<int> architecture; // Architecture of the network
+        size_t maxGenerations = 0;     // Maximum number of generations/updates
+        double sigma = 0.1;            // Standard deviation for noise perturbation
+        double alpha = 0.01;           // Learning rate
+        size_t numPerturbations = 50;  // Number of perturbation pairs (N/2 in some literature)
+        uint32_t seed = 1234;          // Seed for random number generator
+    };
 private:
-    SimParams          mSimParams;
-    std::vector<int>   mNetworkArchitecture;
+    const Params mPar;
 
-    // Training parameters
-    size_t             mMaxGenerations = 0;      // Maximum number of generations/updates
-    size_t             mCurrentGeneration = 0;   // Current generation/update step
-    double             mSigma = 0.1;             // Standard deviation for noise perturbation
-    double             mAlpha = 0.01;            // Learning rate
-    size_t             mNumPerturbations = 50;   // Number of perturbation pairs (N/2 in some literature)
+    SimParams          mSimParams;
 
     // Number of simulations to run for each perturbed network evaluation
     // More variants -> more accurate evaluation (helps prevent overfitting)
@@ -39,28 +43,18 @@ private:
 
     // Random number generator
     std::mt19937 mRng;
-    std::normal_distribution<float> mNoiseDistribution{0.0f, 1.0f}; // Standard normal distribution
 
     // Parameter vector size
     size_t mTotalParams = 0;
 
+    size_t mCurrentGeneration = 0;
+
 public:
-    TrainingTaskRES(
-        const SimParams& sp,
-        const std::vector<int>& architecture,
-        size_t maxGenerations,
-        double sigma,
-        double alpha,
-        size_t numPerturbations,
-        uint32_t seed = 1234)
-        : mSimParams(sp)
-        , mNetworkArchitecture(architecture)
-        , mMaxGenerations(maxGenerations)
-        , mSigma(sigma)
-        , mAlpha(alpha)
-        , mNumPerturbations(numPerturbations)
-        , mCentralNetwork(architecture) // Initialize central network
-        , mRng(seed)
+    TrainingTaskRES(const Params& par, const SimParams& sp)
+        : mPar(par)
+        , mSimParams(sp)
+        , mCentralNetwork(par.architecture) // Initialize central network
+        , mRng(par.seed)
     {
         // Initialize central network with random parameters
         mCentralNetwork.InitializeRandomParameters(mRng());
@@ -95,7 +89,7 @@ public:
     std::vector<LayerParameters> unflattenParameters(const std::vector<float>& flatParams) const
     {
         assert(flatParams.size() == mTotalParams);
-        std::vector<LayerParameters> layers = mCentralNetwork.GetLayerParameters(); // Get structure
+        auto layers = mCentralNetwork.GetLayerParameters(); // Get structure
         size_t currentIdx = 0;
 
         for (auto& layer : layers)
@@ -152,17 +146,19 @@ public:
             double fitness_minus {};
             std::vector<float> epsilon;
         };
-        std::vector<PerturbationResult> results(mNumPerturbations);
+        std::vector<PerturbationResult> results(mPar.numPerturbations);
 
         ParallelTasks pt; // Parallelization system
 
+        std::normal_distribution<float> noiseDist{0.0f, 1.0f}; // Standard normal distribution
+
         // --- Generate and Evaluate Perturbations ---
-        for (size_t i = 0; i < mNumPerturbations; ++i)
+        for (size_t i = 0; i < mPar.numPerturbations; ++i)
         {
             // Generate noise vector epsilon
             std::vector<float> epsilon(mTotalParams);
             for(size_t j = 0; j < mTotalParams; ++j)
-                epsilon[j] = mNoiseDistribution(mRng);
+                epsilon[j] = noiseDist(mRng);
 
             // Store epsilon for later gradient calculation
             results[i].epsilon = epsilon; // Copy epsilon
@@ -172,7 +168,7 @@ public:
             std::vector<float> params_minus = centralParams;
             for(size_t j = 0; j < mTotalParams; ++j)
             {
-                float perturbation = (float)mSigma * epsilon[j];
+                float perturbation = (float)mPar.sigma * epsilon[j];
                 params_plus[j] += perturbation;
                 params_minus[j] -= perturbation;
                 // Optional: Clamp parameters if needed, though often omitted in ES
@@ -183,7 +179,7 @@ public:
             // --- Evaluate theta_plus ---
             pt.AddTask([this, params_plus = std::move(params_plus), i, &results]()
             {
-                SimpleNeuralNet net_plus(mNetworkArchitecture);
+                SimpleNeuralNet net_plus(mPar.architecture);
                 net_plus.SetLayerParameters(unflattenParameters(params_plus));
                 results[i].fitness_plus = evaluateNetwork(net_plus);
             });
@@ -191,7 +187,7 @@ public:
             // --- Evaluate theta_minus ---
              pt.AddTask([this, params_minus = std::move(params_minus), i, &results]()
              {
-                SimpleNeuralNet net_minus(mNetworkArchitecture);
+                SimpleNeuralNet net_minus(mPar.architecture);
                 net_minus.SetLayerParameters(unflattenParameters(params_minus));
                 results[i].fitness_minus = evaluateNetwork(net_minus);
             });
@@ -213,7 +209,7 @@ public:
 #endif
 
         // --- Calculate Gradient Estimate ---
-        for (size_t i = 0; i < mNumPerturbations; ++i)
+        for (size_t i = 0; i < mPar.numPerturbations; ++i)
         {
             double fitness_diff = results[i].fitness_plus - results[i].fitness_minus;
             const auto& epsilon = results[i].epsilon;
@@ -224,7 +220,7 @@ public:
         }
 
         // --- Update Central Parameters ---
-        double scaleFactor = mAlpha / (2.0 * mNumPerturbations * mSigma);
+        double scaleFactor = mPar.alpha / (2.0 * mPar.numPerturbations * mPar.sigma);
         for (size_t j = 0; j < mTotalParams; ++j)
         {
             centralParams[j] += (float)scaleFactor * gradientEstimate[j];
@@ -276,12 +272,12 @@ public:
 
     // Getters for training status
     size_t GetCurrentGeneration() const { return mCurrentGeneration; }
-    size_t GetMaxGenerations() const { return mMaxGenerations; }
+    size_t GetMaxGenerations() const { return mPar.maxGenerations; }
     double GetBestScore() const { return mBestScore; } // Returns the best score seen for the central network
-    double GetSigma() const { return mSigma; }
-    double GetAlpha() const { return mAlpha; }
-    size_t GetNumPerturbations() const { return mNumPerturbations; }
-    bool IsTrainingComplete() const { return mCurrentGeneration >= mMaxGenerations; }
+    double GetSigma() const { return mPar.sigma; }
+    double GetAlpha() const { return mPar.alpha; }
+    size_t GetNumPerturbations() const { return mPar.numPerturbations; }
+    bool IsTrainingComplete() const { return mCurrentGeneration >= mPar.maxGenerations; }
     // Get the central network object
     const SimpleNeuralNet& GetCentralNetwork() const { return mCentralNetwork; }
 };
