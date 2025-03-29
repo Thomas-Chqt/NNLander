@@ -8,6 +8,7 @@
 #include <cmath>  // For std::sqrt, std::exp
 #include <cassert> // For assert
 #include <algorithm> // For std::transform, std::clamp
+#include <cstdio> // For printf debugging
 #include "Utils.h"
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
@@ -30,7 +31,7 @@ private:
 
     // Number of simulations to run for each perturbed network evaluation
     // More variants -> more accurate evaluation (helps prevent overfitting)
-    static constexpr size_t SIM_VARIANTS_N = 10;
+    static constexpr size_t SIM_VARIANTS_N = 50;
 
     // Central network being trained
     SimpleNeuralNet mCentralNetwork;
@@ -67,6 +68,7 @@ public:
 
         // Initial evaluation of the central network
         mBestScore = evaluateNetwork(mCentralNetwork);
+        printf("[DEBUG] Initial Central Network Score: %.4f\n", mBestScore); // Log initial score
     }
 
     //==================================================================
@@ -198,6 +200,18 @@ public:
         // Wait for all evaluations to complete
         pt.WaitAll();
 
+#if 0
+        if (!(mCurrentGeneration % 100)) // Log every 10 generations to avoid spam
+        {
+             printf("[DEBUG Gen %zu] Perturbation Scores:\n", mCurrentGeneration);
+             for (size_t i = 0; i < std::min((size_t)3, mNumPerturbations); ++i) {
+                 printf("  [%zu] F+: %.4f, F-: %.4f, Diff: %.4f\n",
+                        i, results[i].fitness_plus, results[i].fitness_minus,
+                        results[i].fitness_plus - results[i].fitness_minus);
+             }
+        }
+#endif
+
         // --- Calculate Gradient Estimate ---
         for (size_t i = 0; i < mNumPerturbations; ++i)
         {
@@ -247,7 +261,7 @@ public:
         Simulation sim(mSimParams, simulationSeed);
 
         // Run the simulation until it ends, or 30 (virtual) seconds have passed
-        while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < 30.0)
+        while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < Simulation::MAX_TIME_S)
         {
             // Step the simulation forward...
             sim.AnimateSim([&](const float* states, float* actions)

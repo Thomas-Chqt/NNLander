@@ -76,7 +76,7 @@ public:
         Simulation sim(mSimParams, simulationSeed);
 
         // Run the simulation until it ends, or 30 (virtual) seconds have passed
-        while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < 30.0)
+        while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < Simulation::MAX_TIME_S)
         {
             // Step the simulation forward...
             sim.AnimateSim([&](const float* states, float* actions)

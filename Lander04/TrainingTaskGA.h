@@ -55,7 +55,7 @@ private:
     double             mElitePercentage = 0.1;           // Percentage of top individuals to keep unchanged
     // Number of simulations to run for each individual
     // More variants -> more accurate evaluation (helps prevent overfitting)
-    static constexpr size_t SIM_VARIANTS_N = 10;
+    static constexpr size_t SIM_VARIANTS_N = 30;
 
     // Population
     std::vector<Individual> mPopulation;
@@ -310,7 +310,7 @@ public:
         Simulation sim(mSimParams, simulationSeed);
 
         // Run the simulation until it ends, or 30 (virtual) seconds have passed
-        while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < 30.0)
+        while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < Simulation::MAX_TIME_S)
         {
             // Step the simulation forward...
             sim.AnimateSim([&](const float* states, float* actions)

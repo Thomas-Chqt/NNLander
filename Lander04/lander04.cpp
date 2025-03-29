@@ -20,7 +20,7 @@ static const float RESTART_DELAY = 2.0f;
 // Number of training generations to run
 static const int MAX_TRAINING_GENERATIONS = 10000;
 // Size of population
-static const int POPULATION_SIZE = 100;
+static const int POPULATION_SIZE = 50;
 // Mutation parameters
 static const double MUTATION_RATE = 0.1;
 static const double MUTATION_STRENGTH = 0.3;

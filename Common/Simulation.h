@@ -11,6 +11,18 @@
 #include "Utils.h" // For the random number generation
 
 //==================================================================
+inline float calcMagnitude(const Vector2& vec)
+{
+    float m = vec.x*vec.x + vec.y*vec.y;
+    return m ? std::sqrt(m) : 0.0f;
+}
+
+inline float mapTo01(float value, float inMin, float inMax)
+{
+    return std::clamp((value - inMin) / (inMax - inMin), 0.0f, 1.0f);
+}
+
+//==================================================================
 // General simulation parameters (screen size, gravity, etc.)
 //==================================================================
 class SimParams
@@ -63,10 +75,12 @@ public:
     bool    mControl_LeftThrust = false;
     bool    mControl_RightThrust = false;
 
+    static constexpr float MAX_FUEL = 100.0f;
+
     // These are the state variables of the lander
     Vector2 mPos {0.0f, 0.0f};
     Vector2 mVel {0.0f, 0.0f};
-    float   mFuel = 100.0f;
+    float   mFuel = MAX_FUEL;
     bool    mStateIsLanded = false;
     bool    mStateIsCrashed = false;
 
@@ -247,6 +261,10 @@ public:
     static constexpr double mTimeStepS = 1.0 / 60.0;
     double      mElapsedTimeS = 0;
 
+    static constexpr float MAX_TIME_S = 100.0f;
+
+    float mMaxDistanceToPad = 0.0f;
+
     // Constructor
     Simulation(const SimParams& sp, uint64_t seed)
         : sp(sp)
@@ -254,6 +272,9 @@ public:
         , mLandingPad(sp, seed)
         , mTerrain(sp, mLandingPad, seed)
     {
+        auto w = sp.SCREEN_WIDTH;
+        auto h = sp.SCREEN_HEIGHT;
+        mMaxDistanceToPad = calcMagnitude({w, h});
     }
 
     // Execute one simulation step
@@ -304,25 +325,27 @@ public:
     // Calculate the score for the simulation
     double CalculateScore() const
     {
-        double score = 1000;
+        double score = 1;
 
         // Calculate distance to pad center
         const auto landerPos = mLander.mPos;
         const auto padPos = mLandingPad.mPos;
-        const auto distanceToPad =
-            std::sqrt(std::pow(landerPos.x - padPos.x, 2) +
-                      std::pow(landerPos.y - padPos.y, 2));
+        const auto distanceToPad = calcMagnitude({padPos.x - landerPos.x,
+                                                  padPos.y - landerPos.y});
 
-        score /= (1 + distanceToPad); // Penalize distance to pad
-        score /= (1 + mElapsedTimeS); // Penalize time
+        score += 1 * (1 - mapTo01(distanceToPad, 0.0f, mMaxDistanceToPad)); // Penalize distance to pad
+        //score -= 0.1 * mapTo01(mElapsedTimeS, 0.0f, MAX_TIME_S); // Penalize time
+        //score += 0.1 * mapTo01(mLander.mFuel, 0.0f, Lander::MAX_FUEL); // Bonus for fuel
+        auto speed = calcMagnitude(mLander.mVel);
+        score += 0.1 * (1 - mapTo01(speed, 0.0f, sp.LANDING_SAFE_SPEED)); // Bonus for soft landing
 
         if (mLander.mStateIsLanded)
-            score *= 10.0; // Bonus for successful landing
+            score += 1;
 
         if (mLander.mStateIsCrashed)
-            score /= 10.0; // Penalty for crashing
+            score -= 10;
 
-        return score;
+        return score * 10; // Scale for readability
     }
 };
 
