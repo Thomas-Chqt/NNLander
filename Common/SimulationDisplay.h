@@ -65,7 +65,7 @@ inline Vector2 SimToScreen(const Vector2& simPos, const SimParams& sp)
 {
     return Vector2
     {
-        simPos.x,
+        simPos.x + sp.SCREEN_WIDTH*0.5f,
         sp.SCREEN_HEIGHT - simPos.y
     };
 }

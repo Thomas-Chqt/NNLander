@@ -114,7 +114,7 @@ public:
         mPos.y += mVel.y;
 
         // Limit lander to screen edges
-        mPos.x = std::clamp(mPos.x, 0.0f, (float)sp.SCREEN_WIDTH);
+        mPos.x = std::clamp(mPos.x, -sp.SCREEN_WIDTH*0.6f, sp.SCREEN_WIDTH*0.6f);
 
         // Limit lander to the top of the area
         if (mPos.y > sp.SCREEN_HEIGHT) mPos.y = sp.SCREEN_HEIGHT;
@@ -140,7 +140,9 @@ public:
         : sp(sp)
     {
         // Random position for the landing pad
-        mPos.x = FastRandomRange(seed, mPadWidth/2, sp.SCREEN_WIDTH - mPadWidth/2);
+        auto hsw = sp.SCREEN_WIDTH*0.5f;
+        auto hpw = mPadWidth*0.5f;
+        mPos.x = FastRandomRange(seed, -hsw + hpw, hsw - hpw);
         mPos.y = sp.GROUND_LEVEL;
     }
 
@@ -189,7 +191,7 @@ public:
 
         for (size_t i=0; i <= SEGMENTS_N; ++i)
         {
-            mPoints[i].x = i * segmentWidth;
+            mPoints[i].x = i * segmentWidth - sp.SCREEN_WIDTH*0.5f;
 
             // Find landing pad segment
             float padLeftX = pad.mPos.x - pad.mPadWidth/2;
@@ -248,7 +250,7 @@ public:
     // Constructor
     Simulation(const SimParams& sp, uint64_t seed)
         : sp(sp)
-        , mLander(sp, Vector2{sp.SCREEN_WIDTH * 0.5f, sp.SCREEN_HEIGHT * 0.75f})
+        , mLander(sp, Vector2{0.0f, sp.SCREEN_HEIGHT * 0.75f})
         , mLandingPad(sp, seed)
         , mTerrain(sp, mLandingPad, seed)
     {
