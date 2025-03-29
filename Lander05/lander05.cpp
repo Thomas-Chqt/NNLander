@@ -19,9 +19,9 @@ static const float RESTART_DELAY = 2.0f;
 
 // Number of training generations/updates to run
 static const int MAX_TRAINING_GENERATIONS = 10000;
-// REINFORCE-ES Hyperparameters
-static const double SIGMA = 0.1;             // Noise standard deviation
-static const double ALPHA = 0.020;            // Learning rate
+// REINFORCE-ES Hyperparameters (NOTE: internally scaled by params count)
+static const double SIGMA = 0.5;             // Noise standard deviation
+static const double ALPHA = 0.40;            // Learning rate
 static const size_t NUM_PERTURBATIONS = 50;  // Number of perturbation pairs
 
 // Forward declarations

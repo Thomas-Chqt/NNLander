@@ -46,6 +46,9 @@ private:
 
     // Parameter vector size
     size_t mTotalParams = 0;
+    // Scaled hyperparameters
+    double mAdaptedSigma {};
+    double mAdaptedAlpha {};
 
     size_t mCurrentGeneration = 0;
 
@@ -59,6 +62,12 @@ public:
         // Initialize central network with random parameters
         mCentralNetwork.InitializeRandomParameters(mRng());
         mTotalParams = mCentralNetwork.GetTotalParameterCount();
+
+        // Scale sigma and alpha by the number of parameters of the network
+        // This helps keeping constant the effective learning when the
+        // network size changes
+        mAdaptedSigma = mPar.sigma / std::sqrt((double)mTotalParams);
+        mAdaptedAlpha = mPar.alpha / (double)mTotalParams;
 
         // Initial evaluation of the central network
         mBestScore = evaluateNetwork(mCentralNetwork);
@@ -168,7 +177,7 @@ public:
             std::vector<float> params_minus = centralParams;
             for(size_t j = 0; j < mTotalParams; ++j)
             {
-                float perturbation = (float)mPar.sigma * epsilon[j];
+                const auto perturbation = (float)mAdaptedSigma * epsilon[j];
                 params_plus[j] += perturbation;
                 params_minus[j] -= perturbation;
                 // Optional: Clamp parameters if needed, though often omitted in ES
@@ -220,10 +229,10 @@ public:
         }
 
         // --- Update Central Parameters ---
-        double scaleFactor = mPar.alpha / (2.0 * mPar.numPerturbations * mPar.sigma);
+        const auto scaleFactor = mAdaptedAlpha / (2.0 * mPar.numPerturbations * mAdaptedSigma);
         for (size_t j = 0; j < mTotalParams; ++j)
         {
-            centralParams[j] += (float)scaleFactor * gradientEstimate[j];
+            centralParams[j] += (float)(scaleFactor * gradientEstimate[j]);
              // Optional: Clamp parameters
              // centralParams[j] = std::clamp(centralParams[j], -1.0f, 1.0f);
         }
@@ -274,8 +283,8 @@ public:
     size_t GetCurrentGeneration() const { return mCurrentGeneration; }
     size_t GetMaxGenerations() const { return mPar.maxGenerations; }
     double GetBestScore() const { return mBestScore; } // Returns the best score seen for the central network
-    double GetSigma() const { return mPar.sigma; }
-    double GetAlpha() const { return mPar.alpha; }
+    double GetSigma() const { return mAdaptedSigma; }
+    double GetAlpha() const { return mAdaptedAlpha; }
     size_t GetNumPerturbations() const { return mPar.numPerturbations; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mPar.maxGenerations; }
     // Get the central network object
