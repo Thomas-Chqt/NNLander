@@ -3,6 +3,7 @@
 
 #include "raylib.h"
 #include "Simulation.h"
+#include "Utils.h"
 #include <vector>
 
 // Here we collect all the simulation drawing functions
@@ -29,15 +30,17 @@ inline void DrawStars(const Simulation& sim, int64_t drawFrame)
     if (stars.empty())
     {
         stars.resize(400);
+        // Create a RandomGenerator with a fixed seed for reproducible stars
+        RandomGenerator rng(0xABCDEF0123456789);
         for (auto& star : stars)
         {
-            star.position.x = (float)GetRandomValue(0, (int)sp.SCREEN_WIDTH);
-            star.position.y = (float)GetRandomValue(0, (int)sp.SCREEN_HEIGHT);
-            star.lum = (float)GetRandomValue(30, 60) / 100.0f;
-            star.size = (float)GetRandomValue(50, 100) / 100.0f;
-            star.shimmerOff = GetRandomValue(0, 1000);
-            star.shimmerPeriod = GetRandomValue(40, 90);
-            star.shimmerStre = (float)GetRandomValue(40, 60) / 100.0f;
+            star.position.x = rng.RandRange(0, sp.SCREEN_WIDTH);
+            star.position.y = rng.RandRange(0, sp.SCREEN_HEIGHT);
+            star.lum = rng.RandRange(0.3f, 0.6f);
+            star.size = rng.RandRange(0.5f, 1.0f);
+            star.shimmerOff = rng.RandRange(0, 1000);
+            star.shimmerPeriod = rng.RandRange(40, 90);
+            star.shimmerStre = rng.RandRange(0.4f, 0.6f);
         }
     }
 
@@ -91,13 +94,17 @@ inline void DrawLander(const Lander& lander, const SimParams& sp)
     if (lander.mStateIsCrashed || lander.mStateIsLanded || lander.mFuel <= 0)
         return;
 
+    // Use a Random Generator with the current draw coordinates as seed
+    // This gives different but consistent flame patterns for each position
+    RandomGenerator rng(*(uint64_t*)&drawX ^ (*(uint64_t*)&drawY << 32));
+
     // Display a little flame if the thruster is on
     if (lander.mControl_UpThrust)
     {
         DrawTriangle(
             {drawX - 8, drawY + 15},
             {drawX + 8, drawY + 15},
-            {drawX, drawY + 25 + GetRandomValue(0, 5)},
+            {drawX, drawY + 25 + rng.RandRange(0, 5)},
             ORANGE
         );
     }
@@ -108,7 +115,7 @@ inline void DrawLander(const Lander& lander, const SimParams& sp)
         DrawTriangle(
             {drawX + 15, drawY - 8},
             {drawX + 15, drawY + 8},
-            {drawX + 25 + GetRandomValue(0, 5), drawY},
+            {drawX + 25 + rng.RandRange(0, 5), drawY},
             ORANGE
         );
     }
@@ -119,7 +126,7 @@ inline void DrawLander(const Lander& lander, const SimParams& sp)
         DrawTriangle(
             {drawX - 15, drawY - 8},
             {drawX - 15, drawY + 8},
-            {drawX - 25 - GetRandomValue(0, 5), drawY},
+            {drawX - 25 - rng.RandRange(0, 5), drawY},
             ORANGE
         );
     }

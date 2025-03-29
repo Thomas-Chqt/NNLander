@@ -156,8 +156,11 @@ public:
         // Random position for the landing pad
         auto hsw = sp.SCREEN_WIDTH*0.5f;
         auto hpw = mPadWidth*0.5f;
-        mPos.x = FastRandomRange(seed, -hsw + hpw, hsw - hpw);
+        RandomGenerator rng(seed);
+        mPos.x = rng.RandRange(-hsw + hpw, hsw - hpw);
         mPos.y = sp.GROUND_LEVEL;
+        // Update seed for chaining with other generators
+        seed = rng.NextU64();
     }
 
     // See if it's in the pad area and if it landed or crashed
@@ -202,6 +205,7 @@ public:
         mGroundY = sp.GROUND_LEVEL;
 
         float segmentWidth = sp.SCREEN_WIDTH / SEGMENTS_N;
+        RandomGenerator rng(seed);
 
         for (size_t i=0; i <= SEGMENTS_N; ++i)
         {
@@ -224,9 +228,12 @@ public:
             {
                 // Very gentle height variation for terrain
                 // Only small variations from the ground level
-                mPoints[i].y = mGroundY + FastRandomRange(seed, -10, 10);
+                mPoints[i].y = mGroundY + rng.RandRange(-10, 10);
             }
         }
+
+        // Update seed for chaining with other generators
+        seed = rng.NextU64();
     }
 
     // See if crashed on the terrain
@@ -343,7 +350,7 @@ public:
             score += 1;
 
         if (mLander.mStateIsCrashed)
-            score -= 10;
+            score -= 1;
 
         return score * 10; // Scale for readability
     }

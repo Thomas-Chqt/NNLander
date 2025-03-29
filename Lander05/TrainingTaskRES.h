@@ -31,7 +31,7 @@ private:
 
     // Number of simulations to run for each perturbed network evaluation
     // More variants -> more accurate evaluation (helps prevent overfitting)
-    static constexpr size_t SIM_VARIANTS_N = 50;
+    static constexpr size_t SIM_VARIANTS_N = 30;
 
     // Central network being trained
     SimpleNeuralNet mCentralNetwork;

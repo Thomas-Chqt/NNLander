@@ -4,34 +4,73 @@
 //==================================================================
 #include <cassert>
 #include <cstdint>
+#include <array>
 
-inline uint64_t FastRandom(uint64_t& state)
+//==================================================================
+// Improved random number generator class - uses xoshiro256++ algorithm
+// References:
+// - https://prng.di.unimi.it/
+// - https://en.wikipedia.org/wiki/Xorshift
+//==================================================================
+class RandomGenerator
 {
-    // Loop over for a random number of times, for added entropy
-    const auto n = (int)(2 + ((state>>3) & 3));
-    for (int i = 0; i < n; ++i)
+    std::array<uint64_t, 4> s; // State
+
+    // Helper function for xoshiro256++
+    static inline uint64_t rotl(const uint64_t x, int k)
     {
-        // Must not be zero
-        state = state ? state : 0xDEADBEEFDEADBEEF;
-
-        // xorshift64* algorithm
-        state ^= state >> 12;
-        state ^= state << 25;
-        state ^= state >> 27;
-        state *= UINT64_C(2685821657736338717);
+        return (x << k) | (x >> (64 - k));
     }
-    return state;
-}
+public:
+    // Initialize with a seed
+    explicit RandomGenerator(uint64_t seed = 0xDEADBEEFDEADBEEF)
+    {
+        SeedXoshiro256(seed);
+    }
 
-inline float FastRandomFloat(uint64_t& state)
-{
-    return (FastRandom(state) >> 11) * (1.0f / 9007199254740992.0f);
-}
+    // Properly seed the generator using splitmix64 to initialize all state
+    void SeedXoshiro256(uint64_t seed)
+    {
+        // Use splitmix64 to initialize all 4 states
+        for (int i = 0; i < 4; ++i)
+        {
+            seed += 0x9e3779b97f4a7c15;
+            uint64_t z = seed;
+            z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
+            z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
+            s[i] = z ^ (z >> 31);
+        }
+    }
 
-inline float FastRandomRange(uint64_t& state, float min, float max)
-{
-    return min + (max - min) * FastRandomFloat(state);
-}
+    // Generate a random uint64_t - xoshiro256++ algorithm
+    uint64_t NextU64()
+    {
+        const uint64_t result = rotl(s[0] + s[3], 23) + s[0];
+        const uint64_t t = s[1] << 17;
+
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+
+        s[2] ^= t;
+        s[3] = rotl(s[3], 45);
+
+        return result;
+    }
+
+    // Generate a random float between 0 and 1
+    float NextFloat() {
+        // Use top 53 bits for maximum precision in double conversion
+        return (NextU64() >> 11) * (1.0f / 9007199254740992.0f);
+    }
+
+    // Generate a random float within a range
+    float RandRange(float min, float max) { return min + (max - min) * NextFloat(); }
+
+    // Generate a random integer within a range [min, max] (inclusive)
+    int RandRangeInt(int min, int max) { return min + (NextU64() % (max - min + 1)); }
+};
 
 //==================================================================
 // ParallelTasks class - handles parallel execution of tasks
