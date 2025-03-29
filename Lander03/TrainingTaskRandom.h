@@ -48,7 +48,7 @@ public:
         net.InitializeRandomParameters(networkSeed);
 
         // Random seed for the simulation
-        const uint32_t simulationSeed = 1134;
+        const uint32_t simulationSeed = 1135;
         // Test the network on the simulation to get a score
         const auto currentScore = TestNetworkOnSimulation(simulationSeed, net);
         // If this network is better than our current best, save it

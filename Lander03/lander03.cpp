@@ -17,7 +17,7 @@ static const int SCREEN_HEIGHT = 600;
 static const float RESTART_DELAY = 2.0f;
 
 // Number of training epochs to run
-static const int MAX_TRAINING_EPOCHS = 50000;
+static const int MAX_TRAINING_EPOCHS = 100000;
 
 // Forward declarations
 static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask);
@@ -50,7 +50,7 @@ int main()
     sp.SCREEN_HEIGHT = (float)SCREEN_HEIGHT;
 
     // Create the simulation object with the parameters
-    uint32_t seed = 1134; // Initial random seed
+    uint32_t seed = 1135; // Initial random seed
     Simulation sim(sp, seed);
 
     // Create the training task
