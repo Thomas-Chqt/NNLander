@@ -244,14 +244,92 @@ Based on natural selection. `-` 自然選択に基づく。
 
 ---
 
-# Beyond Genetic Algorithm
+# Lander05: REINFORCE-ES Training
+
+REINFORCE-ES is an **Evolution Strategy (ES)** approach, a type of **Reinforcement Learning** algorithm.
+REINFORCE-ESは、**強化学習**アルゴリズムの一種である**進化戦略（ES）**アプローチです。
+
+Instead of a large population like GA, it iteratively refines a single network by testing small, random variations ("perturbations") and moving towards the variations that yield better scores.
+GAのような大規模な集団の代わりに、小さなランダムな変動（「摂動」）をテストし、より良いスコアをもたらす変動に向かって単一のネットワークを反復的に洗練します。
+
+---
+
+# Lander05: REINFORCE-ES: The Core Idea
+
+Imagine a group of ants exploring a field.
+フィールドを探索するアリの群れを想像してください。
+
+Each ant is a feeler that attempts a slightly different direction. Each ants level of success determines the _general direction_ of the group for the next step.
+各アリはわずかに異なる方向を試みる触覚です。各アリの成功度が次のステップのグループの「一般的な方向」を決定します。
+
+---
+
+# REINFORCE-ES: The Steps
+
+1.  Create 50 new NNs based on current NN, adding noise to the parameters
+    現在のニューラルネットワークに基づいて50の新しいニューラルネットワークを作成し、パラメータにノイズを追加します。
+2.  Evaluate Score/fitness of each new NN
+    各新しいニューラルネットワークのスコア/フィットネスを評価します。
+3.  Noise acts as a "feeler", to find the general direction of good changes
+    ノイズは「触覚」として機能し、良い変化の一般的な方向を見つけます。
+4.  Update network with the new general direction
+    新しい一般的な方向でネットワークを更新します。
+5.  Repeat again from step 1
+    ステップ1から再度繰り返します。
+
+---
+# REINFORCE-ES: Pseudocode
+```C++
+θ = RandomNN() // Theta is our working Neural Network
+σ = 0.1        // Sigma is our chosen noise level
+α = 0.01       // Alpha is our chosen learning rate
+Loop for max_generations
+{
+  gradient_estimate = 0 // Initialize gradient-estimate
+  // Generate and evaluate perturbations in parallel
+  For i = 1 to num_perturbations
+  {
+    Generate noise vector ε ~ N(0, I) // Standard normal noise
+
+    // Create perturbed parameters (up and down the hill)
+    θ_plus  = θ + σ * ε
+    θ_minus = θ - σ * ε
+
+    // Evaluate fitness (score) for both perturbations
+    fitness_plus  = EvaluateNetwork(θ_plus)
+    fitness_minus = EvaluateNetwork(θ_minus)
+
+    // Accumulate gradient-estimate based on fitness difference
+    gradient_estimate += (fitness_plus - fitness_minus) * ε
+  }
+  // Update central parameters using the estimated gradient
+  θ = θ + (α / (2 * num_perturbations * σ)) * gradient_estimate
+}
+```
+
+
+---
+
+# Comparison of R-ES (Lander05) vs GA (Lander04)
+
+The Genetic Algorithm approach is simpler and more resilient.
+遺伝的アルゴリズムのアプローチはよりシンプルでより回復力があります。
+R-ES has _sigma_ and _alpha_ hyperparameters that, if not tuned properly, may lead to worse performance than GA !
+R-ESには_sigma_と_alpha_のハイパーパラメータがあり、適切に調整されないとGAよりもパフォーマンスが悪化する可能性があります！
+R-ES is closer to backpropagation, where NN parameters are updated based on the gradient of the fitness function.
+R-ESはバックプロパゲーションに近く、ニューラルネットワークのパラメータはフィットネス関数の勾配に基づいて更新されます。
+
+---
+
+# Beyond Genetic Algorithms and REINFORCE-ES
 
 Backpropagation is a more efficient way to train Neural Networks,
-it's the way forward, but comes with its own set of challenges.
-逆伝播法はニューラルネットワークを訓練するためのより効率的な方法であり、前進する方法ですが、独自の課題も伴います。
+but it comes with its own set of challenges.
+バックプロパゲーションはニューラルネットワークを訓練するためのより効率的な方法ですが、それには独自の課題があります。
 
 Feel free to explore !
 自由に探求してください！
+
 
 ---
 
