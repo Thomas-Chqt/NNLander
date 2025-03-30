@@ -36,11 +36,8 @@ static const std::vector<int> NETWORK_ARCHITECTURE = {
 //==================================================================
 int main()
 {
-    // Enable anti-aliasing (MSAA 4X)
-    //SetConfigFlags(FLAG_MSAA_4X_HINT);
-
     // Initialize window
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lunar Lander - Neural Network Training Demo");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "NNLander03 - Random Training");
     SetTargetFPS(60);
 
     // Setup the simulation parameters

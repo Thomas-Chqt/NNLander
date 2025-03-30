@@ -29,11 +29,8 @@ static void getUserBrainActions(const float* in_simState, float* out_actions)
 //==================================================================
 int main()
 {
-    // Enable anti-aliasing (MSAA 4X)
-    //SetConfigFlags(FLAG_MSAA_4X_HINT);
-
     // Initialize window
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lunar Lander Simulation");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "NNLander01 - User Brain");
     SetTargetFPS(60);
 
     // Setup the simulation parameters

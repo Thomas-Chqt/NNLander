@@ -42,11 +42,8 @@ static const std::vector<int> NETWORK_ARCHITECTURE = {
 //==================================================================
 int main()
 {
-    // Enable anti-aliasing (MSAA 4X)
-    //SetConfigFlags(FLAG_MSAA_4X_HINT);
-
     // Initialize window
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Lunar Lander - REINFORCE-ES Training Demo"); // Updated title
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "NNLander05 - REINFORCE-ES Training");
     SetTargetFPS(60);
 
     // Setup the simulation parameters
