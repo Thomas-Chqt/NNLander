@@ -36,6 +36,7 @@ Linux/macOSの場合：
 ./build/bin/lander02
 ./build/bin/lander03
 ./build/bin/lander04
+./build/bin/lander05
 ```
 Windowsの場合：
 ```bash
@@ -43,6 +44,7 @@ Windowsの場合：
 .\build\bin\Release\lander02.exe
 .\build\bin\Release\lander03.exe
 .\build\bin\Release\lander04.exe
+.\build\bin\Release\lander05.exe
 ```
 
 #### Visual Studioの使用
@@ -75,9 +77,15 @@ NNLander/
 │   └── CMakeLists.txt            # ビルド設定
 ├── Lander03/                     # 改良されたニューラルネットワーク実装
 │   ├── lander03.cpp              # メインプログラム
+│   ├── TrainingTaskRandom.h      # ランダムトレーニングタスク
 │   └── CMakeLists.txt            # ビルド設定
 ├── Lander04/                     # 高度なニューラルネットワーク実装
 │   ├── lander04.cpp              # メインプログラム
+│   ├── TrainingTaskGA.h          # 遺伝的アルゴリズムトレーニングタスク
+│   └── CMakeLists.txt            # ビルド設定
+├── Lander05/                     # 強化学習ニューラルネットワーク応用
+│   ├── lander05.cpp              # メインプログラム
+│   ├── TrainingTaskRES.h         # REINFORCE-ES トレーニングタスク
 │   └── CMakeLists.txt            # ビルド設定
 ├── slides/                       # ワークショッププレゼンテーション資料
 └── build/                        # ビルド出力ディレクトリ

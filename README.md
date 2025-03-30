@@ -45,6 +45,7 @@ On Linux/macOS:
 ./build/bin/lander02
 ./build/bin/lander03
 ./build/bin/lander04
+./build/bin/lander05
 ```
 
 On Windows:
@@ -53,6 +54,7 @@ On Windows:
 .\build\bin\Release\lander02.exe
 .\build\bin\Release\lander03.exe
 .\build\bin\Release\lander04.exe
+.\build\bin\Release\lander05.exe
 ```
 
 #### Using Visual Studio
@@ -87,9 +89,15 @@ NNLander/
 │   └── CMakeLists.txt            # Build configuration
 ├── Lander03/                     # Improved neural network implementation
 │   ├── lander03.cpp              # Main program
+│   ├── TrainingTaskRandom.h      # Random training task
 │   └── CMakeLists.txt            # Build configuration
 ├── Lander04/                     # Advanced neural network implementation
 │   ├── lander04.cpp              # Main program
+│   ├── TrainingTaskGA.h          # Genetic Algorithm training task
+│   └── CMakeLists.txt            # Build configuration
+├── Lander05/                     # Reinforcement Learning neural network application
+│   ├── lander05.cpp              # Main program
+│   ├── TrainingTaskRES.h         # REINFORCE-ES training task
 │   └── CMakeLists.txt            # Build configuration
 ├── slides/                       # Workshop presentation materials
 └── build/                        # Build output directory
