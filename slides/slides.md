@@ -32,7 +32,7 @@ style: |
 <br>
 
 <div style="text-align: right; font-size: 0.8em;">by Davide Pasca</div>
-<div style="text-align: right; font-size: 0.8em;">v 1.0</div>
+<div style="text-align: right; font-size: 0.8em;">v 1.2</div>
 
 <div style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 0.8em;">
 <a href="https://github.com/dpasca/NNLander">https://github.com/dpasca/NNLander</a>
@@ -262,6 +262,11 @@ Imagine a group of ants exploring a field.
 Each ant is a feeler that attempts a slightly different direction. Each ants level of success determines the _general direction_ of the group for the next step.
 各アリはわずかに異なる方向を試みる触覚です。各アリの成功度が次のステップのグループの「一般的な方向」を決定します。
 
+Reference:
+- [A Visual Guide to Evolution Strategies](https://blog.otoro.net/2017/10/29/visual-evolution-strategies/) (Otoro 2017)
+- [Evolution Strategies](https://openai.com/index/evolution-strategies/) (OpenAI 2017)
+- [Evolution Strategies as a Scalable Alternative to RL](https://arxiv.org/abs/1703.03864) (Salimans et al. 2017)
+
 ---
 
 # REINFORCE-ES: The Steps
@@ -315,7 +320,7 @@ Loop for max_generations
 The Genetic Algorithm approach is simpler and more resilient.
 遺伝的アルゴリズムのアプローチはよりシンプルでより回復力があります。
 R-ES has _sigma_ and _alpha_ hyperparameters that, if not tuned properly, may lead to worse performance than GA !
-R-ESには_sigma_と_alpha_のハイパーパラメータがあり、適切に調整されないとGAよりもパフォーマンスが悪化する可能性があります！
+R-ESには _sigma_ と _alpha_ のハイパーパラメータがあり、適切に調整されないとGAよりもパフォーマンスが悪化する可能性があります！
 R-ES is closer to backpropagation, where NN parameters are updated based on the gradient of the fitness function.
 R-ESはバックプロパゲーションに近く、ニューラルネットワークのパラメータはフィットネス関数の勾配に基づいて更新されます。
 
@@ -361,18 +366,14 @@ Feel free to explore !
 
 # Thank You!
 
-**Resources:**
-- [OpenAI API Documentation](https://platform.openai.com/docs/)
-- [Ollama Project](https://ollama.ai/)
-- [Node.js Documentation](https://nodejs.org/en/docs/)
-
 **Contact:**
 
 *Davide Pasca*:
-- [davide@newtypekk.com](mailto:davide@newtypekk.com)
-- [github.com/dpasca](https://github.com/dpasca)
-- [newtypekk.com](https://newtypekk.com)
-- [x.com/109mae](https://x.com/109mae)
+- X: [x.com/109mae](https://x.com/109mae)
+- GitHub: [github.com/dpasca](https://github.com/dpasca)
+- Email: [davide@newtypekk.com](mailto:davide@newtypekk.com)
+- Business: [newtypekk.com](https://newtypekk.com)
+- Games: [oykgames.com](https://oykgames.com)
 
 ---
 

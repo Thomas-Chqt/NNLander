@@ -45,7 +45,7 @@
 <br />
 <br />
 <div style="text-align: right; font-size: 0.8em;">by Davide Pasca</div>
-<div style="text-align: right; font-size: 0.8em;">v 1.0</div>
+<div style="text-align: right; font-size: 0.8em;">v 1.2</div>
 <div style="position: absolute; bottom: 20px; left: 0; right: 0; text-align: center; font-size: 0.8em;">
 <a href="https://github.com/dpasca/NNLander">https://github.com/dpasca/NNLander</a>
 </div>
@@ -675,6 +675,12 @@ GAのような大規模な集団の代わりに、小さなランダムな変動
 フィールドを探索するアリの群れを想像してください。</p>
 <p>Each ant is a feeler that attempts a slightly different direction. Each ants level of success determines the <em>general direction</em> of the group for the next step.<br />
 各アリはわずかに異なる方向を試みる触覚です。各アリの成功度が次のステップのグループの「一般的な方向」を決定します。</p>
+<p>Reference:</p>
+<ul>
+<li><a href="https://blog.otoro.net/2017/10/29/visual-evolution-strategies/">A Visual Guide to Evolution Strategies</a> (Otoro 2017)</li>
+<li><a href="https://openai.com/index/evolution-strategies/">Evolution Strategies</a> (OpenAI 2017)</li>
+<li><a href="https://arxiv.org/abs/1703.03864">Evolution Strategies as a Scalable Alternative to RL</a> (Salimans et al. 2017)</li>
+</ul>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="18" data-paginate="true" data-theme="default" data-style="section {
   padding-top: 20px !important;
@@ -803,7 +809,7 @@ Loop <span class="hljs-keyword">for</span> max_generations
 <p>The Genetic Algorithm approach is simpler and more resilient.<br />
 遺伝的アルゴリズムのアプローチはよりシンプルでより回復力があります。<br />
 R-ES has <em>sigma</em> and <em>alpha</em> hyperparameters that, if not tuned properly, may lead to worse performance than GA !<br />
-R-ESには_sigma_と_alpha_のハイパーパラメータがあり、適切に調整されないとGAよりもパフォーマンスが悪化する可能性があります！<br />
+R-ESには <em>sigma</em> と <em>alpha</em> のハイパーパラメータがあり、適切に調整されないとGAよりもパフォーマンスが悪化する可能性があります！<br />
 R-ES is closer to backpropagation, where NN parameters are updated based on the gradient of the fitness function.<br />
 R-ESはバックプロパゲーションに近く、ニューラルネットワークのパラメータはフィットネス関数の勾配に基づいて更新されます。</p>
 </section>
@@ -945,19 +951,14 @@ but it comes with its own set of challenges.<br />
 }
 ;" data-marpit-pagination-total="25">
 <h1 id="thank-you">Thank You!</h1>
-<p><strong>Resources:</strong></p>
-<ul>
-<li><a href="https://platform.openai.com/docs/">OpenAI API Documentation</a></li>
-<li><a href="https://ollama.ai/">Ollama Project</a></li>
-<li><a href="https://nodejs.org/en/docs/">Node.js Documentation</a></li>
-</ul>
 <p><strong>Contact:</strong></p>
 <p><em>Davide Pasca</em>:</p>
 <ul>
-<li><a href="mailto:davide@newtypekk.com">davide@newtypekk.com</a></li>
-<li><a href="https://github.com/dpasca">github.com/dpasca</a></li>
-<li><a href="https://newtypekk.com">newtypekk.com</a></li>
-<li><a href="https://x.com/109mae">x.com/109mae</a></li>
+<li>X: <a href="https://x.com/109mae">x.com/109mae</a></li>
+<li>GitHub: <a href="https://github.com/dpasca">github.com/dpasca</a></li>
+<li>Email: <a href="mailto:davide@newtypekk.com">davide@newtypekk.com</a></li>
+<li>Business: <a href="https://newtypekk.com">newtypekk.com</a></li>
+<li>Games: <a href="https://oykgames.com">oykgames.com</a></li>
 </ul>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="25" data-paginate="true" data-theme="default" data-style="section {
