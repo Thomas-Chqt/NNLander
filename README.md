@@ -123,3 +123,7 @@ NNLander/
 - [github.com/dpasca](https://github.com/dpasca)
 - [newtypekk.com](https://newtypekk.com)
 - [x.com/109mae](https://x.com/109mae)
+
+## Contributions
+
+- Check out [Thomas-Chqt's fork](https://github.com/Thomas-Chqt/NNLander) for additional low-level optimizations.

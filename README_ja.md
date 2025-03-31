@@ -108,3 +108,7 @@ NNLander/
 - [github.com/dpasca](https://github.com/dpasca)
 - [newtypekk.com](https://newtypekk.com)
 - [x.com/109mae](https://x.com/109mae)
+
+## 貢献
+
+- 追加の低レベル最適化については、[Thomas-Chqtのフォーク](https://github.com/Thomas-Chqt/NNLander)をご覧ください。
