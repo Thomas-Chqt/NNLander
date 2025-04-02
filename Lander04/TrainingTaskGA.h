@@ -124,14 +124,14 @@ public:
 
     //==================================================================
     // Run a single training iteration (one generation)
-    void RunIteration()
+    void RunIteration(bool useThread = true)
     {
         // Create the next generation (if this is not the first generation)
         if (mCurrentGeneration != 0)
             evolve();
 
         // Evaluate the fitness of the population
-        evaluatePopulation();
+        evaluatePopulation(useThread);
 
         // Sort the population by fitness (descending)
         std::sort(mPopulation.begin(), mPopulation.end());
@@ -148,7 +148,7 @@ public:
 
     //==================================================================
     // Evaluate fitness for all individuals in the population
-    void evaluatePopulation()
+    void evaluatePopulation(bool useThread = true)
     {
         const uint32_t simStartSeed = 1134;
 
@@ -160,8 +160,7 @@ public:
         // Evaluate each individual's fitness in parallel
         for (auto& individual : mPopulation)
         {
-            pt.AddTask([&]()
-            {
+            auto task = [&]() {
                 double sum = 0.0;
                 for (size_t i = 0; i < SIM_VARIANTS_N; ++i)
                 {
@@ -170,7 +169,11 @@ public:
                 }
 
                 individual.fitness = sum / (double)SIM_VARIANTS_N;
-            });
+            };
+            if (useThread)
+                pt.AddTask(task);
+            else
+                task();
         }
     }
 

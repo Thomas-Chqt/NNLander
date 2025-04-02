@@ -15,10 +15,7 @@ static void trainingTask05(benchmark::State& state)
 
     for (auto _ : state)
     {
-        trainingTask.RunIteration();
+        trainingTask.RunIteration(false);
     }
-
-    state.SetItemsProcessed(state.iterations());
-    state.counters["iterations_per_second"] = benchmark::Counter(state.iterations(), benchmark::Counter::kIsRate);
 }
 BENCHMARK(trainingTask05);

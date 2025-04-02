@@ -76,7 +76,7 @@ private:
     double             mElitePercentage = 0.1;           // Percentage of top individuals to keep unchanged
     // Number of simulations to run for each individual
     // More variants -> more accurate evaluation (helps prevent overfitting)
-    static constexpr size_t SIM_VARIANTS_N = 20;
+    static constexpr size_t SIM_VARIANTS_N = 10;
 
     // Population
     std::vector<Individual> mPopulation;
@@ -123,14 +123,14 @@ public:
 
     //==================================================================
     // Run a single training iteration (one generation)
-    void RunIteration()
+    void RunIteration(bool useThread = true)
     {
         // Create the next generation (if this is not the first generation)
         if (mCurrentGeneration != 0)
             evolve();
 
         // Evaluate the fitness of the population
-        evaluatePopulation();
+        evaluatePopulation(useThread);
 
         // Sort the population by fitness (descending)
         std::sort(mPopulation.begin(), mPopulation.end());
@@ -147,7 +147,7 @@ public:
 
     //==================================================================
     // Evaluate fitness for all individuals in the population
-    void evaluatePopulation()
+    void evaluatePopulation(bool useThread = true)
     {
         const uint32_t simStartSeed = 1134;
 
@@ -158,17 +158,20 @@ public:
         // Evaluate each individual's fitness in parallel
         for (auto& individual : mPopulation)
         {
-            pt.AddTask([&]()
-            {
-                double scores[SIM_VARIANTS_N] = { 0.0 };
+            auto task = [&]() {
+                double sum = 0.0;
                 for (size_t i = 0; i < SIM_VARIANTS_N; ++i)
                 {
                     const auto variantSeed = simStartSeed + (uint32_t)i;
-                    scores[i] = TestNetworkOnSimulation(variantSeed, individual.parameters);
+                    sum += TestNetworkOnSimulation(variantSeed, individual.parameters);
                 }
-                std::sort(scores, scores+SIM_VARIANTS_N);
-                individual.fitness = scores[SIM_VARIANTS_N/2];
-            });
+
+                individual.fitness = sum / (double)SIM_VARIANTS_N;
+            };
+            if (useThread)
+                pt.AddTask(task);
+            else
+                task();
         }
     }
 
