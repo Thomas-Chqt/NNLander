@@ -12,7 +12,7 @@ static void drawUI(Simulation& sim);
 //==================================================================
 // This is just an interface to the user's brain ;)
 //==================================================================
-static void getUserBrainActions(const float* in_simState, float* out_actions)
+static void getUserBrainActions(const Eigen::Vector<float, SIM_BRAINSTATE_N>& in_simState, Eigen::Vector<float, SIM_BRAINACTION_N>& out_actions)
 {
     // We ignore the input state here, because it's up to the user
     // to see the simulation on screen and decide what to do !

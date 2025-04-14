@@ -1,6 +1,10 @@
 #ifndef SIMPLE_NEURAL_NET_H
 #define SIMPLE_NEURAL_NET_H
 
+#include <array>
+#include <concepts>
+#include <functional>
+#include <tuple>
 #include <vector>
 #include <algorithm>
 #include <cmath>
@@ -8,25 +12,54 @@
 #include <stdexcept> // Needed for runtime_error
 #include <numeric>   // Needed for accumulate in GetFlatParameters
 #include <cassert>   // For assert
+#include <Eigen/Dense>
 
 #define SNN_INIT_RANDOM_UNIFORM 0
 #define SNN_INIT_HE_NORMAL 0
 #define SNN_INIT_XAVIER_UNIFORM 1
 
-//==================================================================
-// Structure to hold parameters for a single layer transition
-struct LayerParameters
+template<typename T, typename Scalar>
+concept EigenMatrix = requires
 {
-    std::vector<float> weights; // Matrix: rows=currentLayerSize, cols=prevLayerSize
-    std::vector<float> biases;  // Vector: size=currentLayerSize
+    requires std::is_base_of_v<Eigen::MatrixBase<std::decay_t<T>>, std::decay_t<T>>;
+    requires std::is_same_v<typename T::Scalar, Scalar>;
 };
 
-//==================================================================
+template<typename T, typename Scalar, int Cols>
+concept EigenMatrixC = requires
+{
+    requires EigenMatrix<T, Scalar>;
+    requires std::decay_t<T>::ColsAtCompileTime == Cols;
+};
+
+template<typename T>
+concept NetArch = requires(T t)
+{
+    { t.size()  } -> std::convertible_to<size_t>;
+    { t.front() } -> std::convertible_to<int>;
+    { t.back()  } -> std::convertible_to<int>;
+    { t[0]      } -> std::convertible_to<int>;
+};
+
+template<typename T, typename Y>
+concept OnParamFunc = requires(T t, int l, int r, int c, Y& param)
+{
+    { t(l, r, c, param) };
+};
+
+template<std::floating_point T, NetArch auto netArch>
 class SimpleNeuralNet
 {
-    const std::vector<int> mArchitecture;     // Network architecture (nodes per layer)
-    std::vector<LayerParameters> mLayerParams; // Parameters per layer transition
-    size_t mMaxLayerSize = 0;                 // Maximum number of neurons in any layer
+public:
+    using Parameters = decltype([]<size_t... Is>(std::index_sequence<Is...>) {
+        return std::tuple<Eigen::Matrix<T, netArch[Is+1], netArch[Is]+1>...>{};
+    }(std::make_index_sequence<netArch.size()-1>{}));
+
+    using Inputs = Eigen::Vector<T, netArch.front()>;
+    using Outputs = Eigen::Vector<T, netArch.back()>;
+
+private:
+    Parameters mParams;
 
 public:
 /*
@@ -59,54 +92,32 @@ The example below is just for illustration.
 
   - Total Parameters: 68 -> (Connections + Biases)
 */
-    SimpleNeuralNet(const std::vector<int>& architecture)
-        : mArchitecture(architecture)
+    SimpleNeuralNet()
     {
-        if (architecture.size() < 2) {
-            throw std::runtime_error("Network architecture must have at least 2 layers (input and output).");
-        }
-
-        // Resize the layer parameters vector (one less than num layers)
-        mLayerParams.resize(mArchitecture.size() - 1);
-
-        // Initialize weights and biases vectors for each layer transition
-        for (size_t i = 0; i < mLayerParams.size(); ++i) {
-            int prevLayerSize = mArchitecture[i];
-            int currentLayerSize = mArchitecture[i + 1];
-            mLayerParams[i].weights.resize(prevLayerSize * currentLayerSize);
-            mLayerParams[i].biases.resize(currentLayerSize);
-        }
-
-        // Find the maximum number of neurons in any layer
-        mMaxLayerSize = *std::max_element(mArchitecture.begin(), mArchitecture.end());
+        assert(netArch.size() < 2); // TODO : check at compile time
     }
 
     // Copy constructor
-    SimpleNeuralNet(const SimpleNeuralNet& other)
-        : mArchitecture(other.mArchitecture),     // Copy const architecture
-          mLayerParams(other.mLayerParams),       // Copy layer parameters vector (deep copy)
-          mMaxLayerSize(other.mMaxLayerSize)
-    {}
+    SimpleNeuralNet(const SimpleNeuralNet& other) : mParams(other.mParams)
+    {
+    }
 
     // Copy assignment operator
     SimpleNeuralNet& operator=(const SimpleNeuralNet& other)
     {
-        if (this == &other) // Handle self-assignment
-            return *this;
-
-        // Ensure architectures are compatible before assigning parameters
-        assert(mArchitecture == other.mArchitecture);
-        mLayerParams = other.mLayerParams; // Copy layer parameters (deep copy)
-        // mArchitecture, mMaxLayerSize are const or derived, no need to copy
+        if (this != &other) // Handle self-assignment
+        {
+            mParams = other.mParams; // Copy parameters (deep copy)
+        }
         return *this;
     }
 
-    // Given the architecture, calculate the total number of parameters
-    static size_t CalcTotalParameters(const std::vector<int>& architecture)
+    // Calculate the total number of parameters
+    constexpr static size_t CalcTotalParameters()
     {
         size_t n = 0;
-        for (size_t i=1; i < architecture.size(); ++i)
-            n += architecture[i-1] * architecture[i] + architecture[i];
+        for (size_t i = 1; i < netArch.size(); ++i)
+            n += netArch[i-1] * netArch[i] + netArch[i];
         return n;
     }
 
@@ -116,91 +127,60 @@ The example below is just for illustration.
     // applies the Inputs to the net to get the Outputs.
     // inputs -> net -> outputs
     //==================================================================
-    void FeedForward(const float* pInputs, float* pOutputs) const
+
+    void FeedForward(const Inputs& pInputs, Outputs& pOutputs) const
     {
-        // Basic check if layer params structure seems initialized
-        assert(mLayerParams.size() == (mArchitecture.size() - 1));
-
-        // Allocate buffers on the stack to avoid touching the heap
-        float* lay0_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
-        float* lay1_outs = (float*)alloca(mMaxLayerSize * sizeof(float));
-
-        // Copy inputs (simulation states) to first layer outputs
-        for (int i=0; i < mArchitecture[0]; ++i)
-            lay0_outs[i] = pInputs[i];
-
-        // Process each layer transition
-        for (size_t i = 0; i < mLayerParams.size(); ++i)
-        {
-            const auto& currentLayerParams = mLayerParams[i];
-            const int prevLayerSize = mArchitecture[i];
-            const int currentLayerSize = mArchitecture[i + 1];
-
-            // Check if the specific layer parameters seem valid
-            assert(currentLayerParams.weights.size() == (size_t)(prevLayerSize * currentLayerSize));
-            assert(currentLayerParams.biases.size() == (size_t)currentLayerSize);
-
-
-            const float* weights = currentLayerParams.weights.data();
-            const float* biases = currentLayerParams.biases.data();
-            // int weightIdx = 0; // Unused variable
-
-            // For each neuron in the current layer
-            for (int n1 = 0; n1 < currentLayerSize; ++n1)
-            {
-                // Sum weighted inputs
-                auto sum = 0.0f;
-                for (int n0 = 0; n0 < prevLayerSize; ++n0)
-                {
-                    // Access weights matrix (row-major: n1 * prevLayerSize + n0 or
-                    //                        col-major: n0 * currentLayerSize + n1)
-                    // Assuming weights stored row-major (neuron in current layer is row index)
-                    sum += lay0_outs[n0] * weights[n1 * prevLayerSize + n0];
-                    // If col-major: sum += lay0_outs[n0] * weights[n0 * currentLayerSize + n1];
-                }
-                sum += biases[n1]; // Add bias for this neuron
-
-                lay1_outs[n1] = sum; // Store intermediate result
-            }
-
-            // Apply activation function to all neurons in the current layer
-            for (int n1 = 0; n1 < currentLayerSize; ++n1)
-                lay1_outs[n1] = Activate(lay1_outs[n1]);
-
-            // Swap buffers, next-layer output becomes current-layer output
-            std::swap(lay0_outs, lay1_outs);
-        }
-
-        // Copy final layer outputs to outputs array
-        for (int i = 0; i < mArchitecture.back(); ++i)
-            pOutputs[i] = lay0_outs[i];
+        std::apply([&](const auto&... params) { FeedForward(pInputs, pOutputs, params...); }, mParams);
     }
-
-    // Get the architecture of the network
-    const auto& GetArchitecture() const { return mArchitecture; }
-
+    
     // Get the total number of parameters (weights + biases) in the network
-    size_t GetTotalParameterCount() const {
-        return CalcTotalParameters(mArchitecture);
-    }
+    constexpr size_t GetTotalParameterCount() const { return CalcTotalParameters(); }
 
     // Set the network parameters from layer structure
-    void SetLayerParameters(const std::vector<LayerParameters>& layerParams)
-    {
-        assert(layerParams.size() == mLayerParams.size());
-        // Could add more detailed size checks per layer here if needed
-        mLayerParams = layerParams;
-    }
+    inline void SetParameters(const Parameters& pParams) { mParams = pParams; }
 
     // Get the network parameters as layer structure
-    const std::vector<LayerParameters>& GetLayerParameters() const { return mLayerParams; }
+    const Parameters& GetParameters() const { return mParams; }
+
      // Get mutable access for mutation (use with caution)
-    std::vector<LayerParameters>& GetLayerParameters() { return mLayerParams; }
+    Parameters& GetParameters() { return mParams; }
+
+    T& GetParameter(int layer, int row, int col)
+    {
+        // each element of the array return the r, c of one layer, this allow to get a layer with a
+        // non constexpr layer index
+        static constexpr auto getParamsFuncArray = []<size_t... Idxs>(std::index_sequence<Idxs...>)
+            -> std::array<std::function<T&(const Parameters&, int, int)>, std::tuple_size_v<Parameters>> {
+            return { [](const Parameters& p, int r, int c) -> T& { return std::get<Idxs>(p)(r, c); }... };
+        }(std::make_index_sequence<std::tuple_size_v<Parameters>>{});
+
+        return getParamsFuncArray[layer](mParams, row, col);
+    }
+
+    const T& GetParameters(int layer, int row, int col) const
+    {
+        return const_cast<std::remove_const<decltype(this)>>(this).GetParameters(layer, row, col);
+    }
+
+    void foreachParameters(const OnParamFunc<T> auto& func)
+    {
+        auto fillLayer = [&]<size_t Idx>() {
+            EigenMatrix<T> auto& layer = std::get<Idx>(mParams);
+            for (int r = 0; r < std::remove_cvref_t<decltype(layer)>::RowsAtCompileTime; r++) {
+                for (int c = 0; c < std::remove_cvref_t<decltype(layer)>::ColsAtCompileTime; c++) {
+                    func(Idx, r, c, layer(r, c));
+                }
+            }
+        };
+
+        [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
+            (fillLayer.template operator()<Idxs>(), ...);
+        }(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(mParams)>>>{});
+    }
 
     // Initialize parameters with random values
-    void InitializeRandomParameters(uint32_t seed, float minVal = -1.0f, float maxVal = 1.0f)
+    void InitializeRandomParameters(uint32_t seed)
     {
-        (void)minVal; (void)maxVal;
 #if SNN_INIT_RANDOM_UNIFORM
         std::mt19937 rng(seed);
         std::uniform_real_distribution<float> dist(minVal, maxVal);
@@ -233,30 +213,43 @@ The example below is just for illustration.
         }
 #elif SNN_INIT_XAVIER_UNIFORM
         std::mt19937 rng(seed);
-        // Initialize weights and biases layer by layer
-        for (size_t layerIdx = 0; layerIdx < mLayerParams.size(); ++layerIdx)
-        {
+        foreachParameters([&](int layerIdx, int row, int col, int& param){
+            (void)row;
             // --- Initialize Weights (Xavier Uniform) ---
-            auto fan_in = mArchitecture[layerIdx];
-            auto fan_out = mArchitecture[layerIdx + 1];
+            auto fan_in = netArch[layerIdx];
+            auto fan_out = netArch[layerIdx + 1];
             // Calculate the range limit for Xavier uniform initialization
             float limit = (fan_in + fan_out > 0) ? std::sqrt(6.0f / (float)(fan_in + fan_out)) : 0.0f;
             std::uniform_real_distribution<float> weight_dist(-limit, limit);
 
-            auto& layer_weights = mLayerParams[layerIdx].weights;
-            for (float& w : layer_weights)
-                w = weight_dist(rng);
+            if (col < netArch[layerIdx])
+                param = weight_dist(rng);
 
             // --- Initialize Biases (Zero) ---
-            for (float& b : mLayerParams[layerIdx].biases)
-                b = 0.0f;
-        }
+            else
+                param = 0;
+        });
 #endif
     }
 
 private:
     float Activate(float x) const { return x > 0.0f ? x : 0.0f; } // ReLU
     //float Activate(float x) const { return x > 0.0f ? x : 0.01f * x; } // Leaky ReLU
+    
+    template<int I, int O>
+    void FeedForward(const Eigen::Vector<T, I>& pInputs, Eigen::Vector<T, O>& pOutputs, const Eigen::Matrix<T, O, I+1>& pParams)
+    {
+        pOutputs = (pParams * pInputs.homogeneous()).unaryExpr([&](T x) { return Activate(x); });
+    }
+
+    template<int I, int O>
+    void FeedForward(const Eigen::Vector<T, I>& pInputs, Eigen::Vector<T, O>& pOutputs, const EigenMatrixC<T, I+1> auto& pParams,
+                     const EigenMatrix<T> auto&  pRemaingParams, const EigenMatrix<T> auto& ... pRemaingParamsPack)
+    {
+        Eigen::Vector<T, std::remove_cvref_t<decltype(pParams)>::RowsAtCompileTime> outputs;
+        FeedForward(pInputs, outputs, pParams);
+        FeedForward(outputs, pOutputs, pRemaingParams, pRemaingParamsPack...);
+    }
 };
 
 #endif

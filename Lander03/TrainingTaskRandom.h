@@ -1,8 +1,6 @@
 #ifndef TRAININGTASKRANDOM_H
 #define TRAININGTASKRANDOM_H
 
-#include <random>
-#include <algorithm>
 #include <limits> // Needed for numeric_limits
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
@@ -10,27 +8,27 @@
 //==================================================================
 // TrainingTaskRandom class - handles neural network training
 //==================================================================
+template<std::floating_point T, NetArch auto netArch>
 class TrainingTaskRandom
 {
+public:
+    using NeuralNet = SimpleNeuralNet<T, netArch>;
+
 private:
-    SimParams          mSimParams;
-    std::vector<int>   mNetworkArchitecture;
+    SimParams mSimParams;
 
     // Training parameters
-    size_t             mMaxEpochs = 0 ;
-    size_t             mCurrentEpoch = 0;
-    double             mBestScore = -std::numeric_limits<double>::max();
-    SimpleNeuralNet    mBestNetwork; // Store the best network object
+    size_t    mMaxEpochs = 0 ;
+    size_t    mCurrentEpoch = 0;
+    double    mBestScore = -std::numeric_limits<double>::max();
+    NeuralNet mBestNetwork; // Store the best network object
 
 public:
     TrainingTaskRandom(
         const SimParams& sp,
-        const std::vector<int>& architecture,
         size_t maxEpochs)
         : mSimParams(sp)
-        , mNetworkArchitecture(architecture)
         , mMaxEpochs(maxEpochs)
-        , mBestNetwork(architecture) // Initialize best network with architecture
     {}
 
     //==================================================================
@@ -41,7 +39,7 @@ public:
     void RunIteration()
     {
         // Create a network for this iteration
-        SimpleNeuralNet net(mNetworkArchitecture);
+        NeuralNet net;
         // A different seed for each epoch, to generate different random parameters
         const uint32_t networkSeed = (uint32_t)(mCurrentEpoch + 1111);
         // Initialize the network with random parameters
@@ -70,7 +68,7 @@ public:
     //==================================================================
     double TestNetworkOnSimulation(
         uint32_t simulationSeed,
-        const SimpleNeuralNet& net) const
+        const NeuralNet& net) const
     {
         // Create a simulation with the given seed
         Simulation sim(mSimParams, simulationSeed);
@@ -79,7 +77,7 @@ public:
         while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < Simulation::MAX_TIME_S)
         {
             // Step the simulation forward...
-            sim.AnimateSim([&](const float* states, float* actions)
+            sim.AnimateSim([&](const NeuralNet::Inputs& states, NeuralNet::Outputs& actions)
             {
                 // states -> net -> actions
                 net.FeedForward(states, actions);
@@ -90,7 +88,7 @@ public:
     }
 
     // Get the best network object found so far
-    const SimpleNeuralNet& GetBestNetwork() const { return mBestNetwork; }
+    const NeuralNet& GetBestNetwork() const { return mBestNetwork; }
 
     // Getters for training status
     size_t GetCurrentEpoch() const { return mCurrentEpoch; }

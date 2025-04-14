@@ -16,12 +16,15 @@
 //==================================================================
 // TrainingTaskRES class - handles neural network training using REINFORCE-ES
 //==================================================================
+template<std::floating_point T, NetArch auto netArch>
 class TrainingTaskRES
 {
 public:
+    using NeuralNet = SimpleNeuralNet<T, netArch>;
+
+public:
     struct Params
     {
-        std::vector<int> architecture; // Architecture of the network
         size_t maxGenerations = 0;     // Maximum number of generations/updates
         double sigma = 0.1;            // Standard deviation for noise perturbation
         double alpha = 0.01;           // Learning rate
@@ -38,7 +41,7 @@ private:
     static constexpr size_t SIM_VARIANTS_N = 30;
 
     // Central network being trained
-    SimpleNeuralNet mCentralNetwork;
+    NeuralNet mCentralNetwork;
     double mBestScore = -std::numeric_limits<double>::max(); // Track the best score achieved by the central network
 
     // Random number generator
@@ -77,54 +80,54 @@ public:
     //==================================================================
     // Flatten network parameters into a single vector
     //==================================================================
-    std::vector<float> flattenParameters(const SimpleNeuralNet& net) const
-    {
-        const auto& layers = net.GetLayerParameters();
-        std::vector<float> flatParams;
-        flatParams.reserve(mTotalParams); // Reserve space
+    // std::vector<float> flattenParameters(const SimpleNeuralNet& net) const
+    // {
+    //     const auto& layers = net.GetLayerParameters();
+    //     std::vector<float> flatParams;
+    //     flatParams.reserve(mTotalParams); // Reserve space
 
-        for (const auto& layer : layers)
-        {
-            flatParams.insert(flatParams.end(), layer.weights.begin(), layer.weights.end());
-            flatParams.insert(flatParams.end(), layer.biases.begin(), layer.biases.end());
-        }
-        assert(flatParams.size() == mTotalParams);
-        return flatParams;
-    }
+    //     for (const auto& layer : layers)
+    //     {
+    //         flatParams.insert(flatParams.end(), layer.weights.begin(), layer.weights.end());
+    //         flatParams.insert(flatParams.end(), layer.biases.begin(), layer.biases.end());
+    //     }
+    //     assert(flatParams.size() == mTotalParams);
+    //     return flatParams;
+    // }
 
     //==================================================================
     // Unflatten parameters from a vector into layer structure
     //==================================================================
-    std::vector<LayerParameters> unflattenParameters(const std::vector<float>& flatParams) const
-    {
-        assert(flatParams.size() == mTotalParams);
-        auto layers = mCentralNetwork.GetLayerParameters(); // Get structure
-        size_t currentIdx = 0;
+    // std::vector<LayerParameters> unflattenParameters(const std::vector<float>& flatParams) const
+    // {
+    //     assert(flatParams.size() == mTotalParams);
+    //     auto layers = mCentralNetwork.GetLayerParameters(); // Get structure
+    //     size_t currentIdx = 0;
 
-        for (auto& layer : layers)
-        {
-            size_t weightCount = layer.weights.size();
-            std::copy(
-                flatParams.begin() + currentIdx,
-                flatParams.begin() + currentIdx + weightCount,
-                layer.weights.begin());
-            currentIdx += weightCount;
+    //     for (auto& layer : layers)
+    //     {
+    //         size_t weightCount = layer.weights.size();
+    //         std::copy(
+    //             flatParams.begin() + currentIdx,
+    //             flatParams.begin() + currentIdx + weightCount,
+    //             layer.weights.begin());
+    //         currentIdx += weightCount;
 
-            size_t biasCount = layer.biases.size();
-            std::copy(
-                flatParams.begin() + currentIdx,
-                flatParams.begin() + currentIdx + biasCount,
-                layer.biases.begin());
-            currentIdx += biasCount;
-        }
-        assert(currentIdx == mTotalParams);
-        return layers;
-    }
+    //         size_t biasCount = layer.biases.size();
+    //         std::copy(
+    //             flatParams.begin() + currentIdx,
+    //             flatParams.begin() + currentIdx + biasCount,
+    //             layer.biases.begin());
+    //         currentIdx += biasCount;
+    //     }
+    //     assert(currentIdx == mTotalParams);
+    //     return layers;
+    // }
 
     //==================================================================
     // Evaluate fitness for a given network over multiple simulation variants
     //==================================================================
-    double evaluateNetwork(const SimpleNeuralNet& net) const
+    double evaluateNetwork(const NeuralNet& net) const
     {
         const uint32_t simStartSeed = 1134; // Consistent starting seed for evaluation runs
         double totalScore = 0.0;

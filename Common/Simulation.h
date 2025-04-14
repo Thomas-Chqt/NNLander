@@ -2,11 +2,11 @@
 #define SIMULATION_H
 
 #include <cmath>
-#include <string>
 #include <array>
 #include <algorithm>
-#include <functional>
 
+#include <Eigen/Dense>
+#include "Eigen/src/Core/Matrix.h"
 #include "raylib.h"
 #include "Utils.h" // For the random number generation
 
@@ -256,7 +256,11 @@ public:
 //==================================================================
 // Simulation class
 //==================================================================
-using GetBrainActionsFnT = std::function<void(const float*, float*)>;
+template<typename T, typename S, int stateCount, int actionCount>
+concept GetBrainActionsFn = requires(T t, const Eigen::Vector<S, stateCount>& state, Eigen::Vector<S, actionCount>& actions)
+{
+    { t(state, actions) } -> std::same_as<void>;
+};
 
 class Simulation
 {
@@ -285,7 +289,7 @@ public:
     }
 
     // Execute one simulation step
-    void AnimateSim(const GetBrainActionsFnT& getBrainActions)
+    void AnimateSim(const GetBrainActionsFn<float, SIM_BRAINSTATE_N, SIM_BRAINACTION_N> auto& getBrainActions)
     {
         // Skip the simulation if lander is not active
         if (mLander.mStateIsCrashed || mLander.mStateIsLanded)
@@ -293,8 +297,8 @@ public:
 
         mElapsedTimeS += mTimeStepS;
 
-        // 1. Convert the simulation variables to a simple/flat array for the brain input
-        std::array<float, SIM_BRAINSTATE_N> simState {};
+        // 1. Convert the simulation variables to a eigen vector for the brain input
+        Eigen::Vector<float, SIM_BRAINSTATE_N> simState;
         simState[SIM_BRAINSTATE_LANDER_X] = mLander.mPos.x;
         simState[SIM_BRAINSTATE_LANDER_Y] = mLander.mPos.y;
         simState[SIM_BRAINSTATE_LANDER_VX] = mLander.mVel.x;
@@ -307,7 +311,7 @@ public:
         simState[SIM_BRAINSTATE_PAD_WIDTH] = mLandingPad.mPadWidth;
 
         // 2. Get the brain actions
-        std::array<float, SIM_BRAINACTION_N> actions {};
+        Eigen::Vector<float, SIM_BRAINACTION_N> actions;
         getBrainActions(simState.data(), actions.data());
 
         // 3. Convert the brain actions to the simulation variables

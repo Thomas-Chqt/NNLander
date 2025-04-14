@@ -1,8 +1,4 @@
 #include <vector>
-#include <random>
-#include <algorithm>
-#include <cmath>
-#include <limits>
 #include <chrono>
 
 #include "raylib.h"
@@ -25,18 +21,20 @@ static const int POPULATION_SIZE = 50;
 static const double MUTATION_RATE = 0.1;
 static const double MUTATION_STRENGTH = 0.3;
 
-// Forward declarations
-static void drawUI(Simulation& sim, TrainingTaskGA& trainingTask);
-
 //==================================================================
 // Network configuration
 //==================================================================
-static const std::vector<int> NETWORK_ARCHITECTURE = {
+static constexpr std::array<int, 4> NETWORK_ARCHITECTURE = {
     SIM_BRAINSTATE_N,             // Input layer: simulation state variables
     (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
     (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
     SIM_BRAINACTION_N             // Output layer: actions (up, left, right)
 };
+
+using TrainingTask = TrainingTaskGA<float, NETWORK_ARCHITECTURE>;
+
+// Forward declarations
+static void drawUI(Simulation& sim, TrainingTask& trainingTask);
 
 //==================================================================
 // Main function
@@ -57,9 +55,8 @@ int main()
     Simulation sim(sp, seed);
 
     // Create the training task
-    TrainingTaskGA trainingTask(
+    TrainingTask trainingTask(
         sp,
-        NETWORK_ARCHITECTURE,
         MAX_TRAINING_GENERATIONS,
         POPULATION_SIZE,
         MUTATION_RATE,
@@ -108,7 +105,7 @@ int main()
         else
         {
             // Animate the simulation using the best network from the training task
-            sim.AnimateSim([&](const float* states, float* actions)
+            sim.AnimateSim([&](const TrainingTask::NeuralNet::Inputs& states, TrainingTask::NeuralNet::Outputs& actions)
             {
                 // states -> bestNet -> actions
                 trainingTask.GetBestIndividualNetwork().FeedForward(states, actions);
@@ -135,7 +132,7 @@ int main()
 }
 
 //==================================================================
-static void drawUI(Simulation& sim, TrainingTaskGA& trainingTask)
+static void drawUI(Simulation& sim, TrainingTask& trainingTask)
 {
     // Draw neural network visualization
     //if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)

@@ -11,6 +11,7 @@ inline void DrawTextF(const char* text, float x, float y, int fsize, Color color
 {
     DrawText(TextFormat(text), (int)x, (int)y, fsize, color);
 }
+
 //==================================================================
 static void DrawUIBase(Simulation& sim, int fsize, const std::string& ctrl)
 {
@@ -73,8 +74,8 @@ inline void DrawUITrainingStatus(bool isTrainingComplete, int fsize)
 
 //==================================================================
 // Draws the neural network structure and connection weights.
-// Assumes weights are stored row-major in LayerParameters.
-inline void DrawNeuralNetwork(const SimpleNeuralNet& net)
+template<std::floating_point T, NetArch auto netArch>
+inline void DrawNeuralNetwork(const SimpleNeuralNet<T, netArch>& net)
 {
     //const float screenW = (float)GetScreenWidth();
     //const float screenH = (float)GetScreenHeight();
@@ -87,63 +88,48 @@ inline void DrawNeuralNetwork(const SimpleNeuralNet& net)
     const float startY = 90.0f;
     const int fsize = 15;
 
-    const auto& architecture = net.GetArchitecture();
-    const auto& layerParams = net.GetLayerParameters(); // Get layer-based parameters
+    const typename decltype(net)::Parameters& params = net.GetParameters(); // Get parameters
 
     // Draw connections first (so they appear behind nodes)
-    float prevLayerY = startY;
-    auto prevLayerNodes = architecture[0]; // Use int for consistency with loop types
 
-    for (size_t layerIdx=0; layerIdx < layerParams.size(); ++layerIdx) // Loop through layer transitions
-    {
-        const auto& currentLayerParams = layerParams[layerIdx];
-        const auto* pWeights = currentLayerParams.weights.data();
-        const auto currLayerNodes = architecture[layerIdx + 1];
-        const auto currLayerY = startY + (float)(layerIdx + 1) * layerSpacing;
+    net.foreachParameters([&](int layerIdx, int row, int col, T& param){
+        const float prevLayerY = startY + (float)layerIdx * layerSpacing;
+        int prevLayerSize = netArch[layerIdx];
+
+        const int currLayerSize = netArch[layerIdx + 1]; // because first parameters layer correspond to the second architecture layer
+        const int currLayerY = prevLayerY + layerSpacing;
 
         // Calculate vertical offset to center the layer
-        float prevOffset = (float)(prevLayerNodes - 1) * nodeSpacing / 2;
-        float currOffset = (float)(currLayerNodes - 1) * nodeSpacing / 2;
+        float prevOffsetX = (float)(prevLayerSize - 1) * nodeSpacing / 2;
+        float currOffsetX = (float)(currLayerSize - 1) * nodeSpacing / 2;
 
         // Draw connections between layers
-        for (int prevNode=0; prevNode < prevLayerNodes; ++prevNode)
+        for (int prevNodeIdx = 0; prevNodeIdx < prevLayerSize; ++prevNodeIdx)
         {
-            const auto prevX = startX + (float)prevNode * nodeSpacing - prevOffset;
-            const auto prevY = prevLayerY;
+            const float prevX = startX + (float)prevNodeIdx * nodeSpacing - prevOffsetX;
+            const float prevY = prevLayerY;
 
-            for (int currNode=0; currNode < currLayerNodes; ++currNode)
+            if (col < netArch[layerIdx]) // only the weights, not the bias
             {
-                const auto currX = startX + (float)currNode * nodeSpacing - currOffset;
-                const auto currY = currLayerY;
-
-                // Get weight value directly from the layer's weights vector
-                // Assuming row-major: weights[currNode * prevLayerNodes + prevNode]
-                float weight = pWeights[currNode * prevLayerNodes + prevNode];
-                weight = std::clamp(weight, -1.0f, 1.0f); // Clamp for color mapping
-
+                const float currX = startX + (float)row * nodeSpacing - currOffsetX;
+                const float currY = currLayerY;
+                T clampedParam = std::clamp(param, T(-1.0), T(1.0)); // Clamp for color mapping
+                //
                 // Color based on weight value using lerp between red (-1) and blue (+1)
-                float t = (weight + 1.0f) * 0.5f; // Convert from [-1,1] to [0,1]
+                float t = (clampedParam + 1.0f) * 0.5f; // Convert from [-1,1] to [0,1]
                 Color lineColor = ColorLerp(Color{255,0,0,255}, Color{0,0,255,255}, t);
                 lineColor.a = 128;//(unsigned char)(std::abs(weight) * 255.0f); // Alpha based on weight magnitude
 
-                DrawLineEx(
-                    Vector2{prevX, prevY},
-                    Vector2{currX, currY},
-                    1.0f,
-                    lineColor
-                );
+                DrawLineEx(Vector2{prevX, prevY}, Vector2{currX, currY}, 1.0f, lineColor);
             }
         }
-
-        prevLayerY = currLayerY;
-        prevLayerNodes = currLayerNodes;
-    }
+    });
 
     // Draw nodes
     float layerY = startY;
-    for (size_t layer = 0; layer < architecture.size(); ++layer)
+    for (size_t layer = 0; layer < netArch.size(); ++layer)
     {
-        const auto nodes = (size_t)architecture[layer];
+        const auto nodes = (size_t)netArch[layer];
         const auto offset = (float)(nodes - 1) * nodeSpacing / 2;
 
         for (size_t node = 0; node < nodes; ++node)

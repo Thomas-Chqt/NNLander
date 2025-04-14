@@ -12,47 +12,41 @@
 #define USE_MUTATION_STDDEV 0
 
 //==================================================================
-// Individual class - represents a single member of the population
-//==================================================================
-class Individual
-{
-public:
-    SimpleNeuralNet network; // Neural network object
-    double fitness = -std::numeric_limits<double>::max();  // Fitness score (-infinity by default)
-
-    // Constructor requires architecture
-    Individual(const std::vector<int>& architecture)
-        : network(architecture), fitness(-std::numeric_limits<double>::max()) {}
-
-    // Constructor with existing network and optional fitness
-    Individual(const SimpleNeuralNet& net, double fitnessScore = -std::numeric_limits<double>::max())
-        : network(net), fitness(fitnessScore) {}
-
-    // Default constructor deleted because network needs architecture
-    Individual() = delete;
-
-    // Comparison operator for sorting by fitness (descending order)
-    bool operator<(const Individual& other) const {
-        return fitness > other.fitness;
-    }
-};
-
-//==================================================================
 // TrainingTaskGA class - handles neural network training using genetic algorithms
 //==================================================================
+template<std::floating_point T, NetArch auto netArch>
 class TrainingTaskGA
 {
+public:
+    using NeuralNet = SimpleNeuralNet<T, netArch>;
+
 private:
-    SimParams          mSimParams;
-    std::vector<int>   mNetworkArchitecture;
+    // Individual struct - represents a single member of the population
+    struct Individual
+    {
+        NeuralNet network; // Neural network object
+        double fitness = -std::numeric_limits<double>::max();  // Fitness score (-infinity by default)
+
+        // Constructor with existing network and optional fitness
+        Individual(const  NeuralNet& net, double fitnessScore = -std::numeric_limits<double>::max())
+            : network(net), fitness(fitnessScore)
+        {
+        }
+
+        // Comparison operator for sorting by fitness (descending order)
+        inline bool operator<(const Individual& other) const { return fitness > other.fitness; }
+    };
+
+private:
+    SimParams mSimParams;
 
     // Training parameters
-    size_t             mMaxGenerations = 0;              // Maximum number of generations
-    size_t             mPopulationSize = 50;             // Size of population
-    size_t             mCurrentGeneration = 0;           // Current generation
-    double             mMutationRate = 0.1;              // Probability of mutation
-    double             mMutationStrength = 0.3;          // Scale of mutation
-    double             mElitePercentage = 0.1;           // Percentage of top individuals to keep unchanged
+    size_t  mMaxGenerations = 0;     // Maximum number of generations
+    size_t  mPopulationSize = 50;    // Size of population
+    size_t  mCurrentGeneration = 0;  // Current generation
+    double  mMutationRate = 0.1;     // Probability of mutation
+    double  mMutationStrength = 0.3; // Scale of mutation
+    double  mElitePercentage = 0.1;  // Percentage of top individuals to keep unchanged
     // Number of simulations to run for each individual
     // More variants -> more accurate evaluation (helps prevent overfitting)
     static constexpr size_t SIM_VARIANTS_N = 30;
@@ -67,19 +61,17 @@ private:
 public:
     TrainingTaskGA(
         const SimParams& sp,
-        const std::vector<int>& architecture,
         size_t maxGenerations,
         size_t populationSize,
         double mutationRate,
         double mutationStrength,
         uint32_t seed = 1234)
         : mSimParams(sp)
-        , mNetworkArchitecture(architecture)
         , mMaxGenerations(maxGenerations)
         , mPopulationSize(populationSize)
         , mMutationRate(mutationRate)
         , mMutationStrength(mutationStrength)
-        , mBestIndividual(architecture) // Initialize before mRng to match declaration order
+        , mBestIndividual() // Initialize before mRng to match declaration order
         , mRng(seed)
     {
         // Here we create the initial population, with random networks
@@ -87,8 +79,8 @@ public:
         // Generate random networks for each individual
         for (size_t i=0; i < mPopulationSize; ++i)
         {
-            // Create a network with the specified architecture
-            SimpleNeuralNet net(mNetworkArchitecture);
+            // Create a network
+            NeuralNet net;
             // Initialize its parameters randomly (using a different seed for each)
             // Note: Xavier/He init could be added to InitializeRandomParameters if needed
             net.InitializeRandomParameters(mRng()); // Use the member RNG
@@ -100,14 +92,14 @@ public:
 
     //==================================================================
     // Run a single training iteration (one generation)
-    void RunIteration()
+    void RunIteration(bool useThread = true)
     {
         // Create the next generation (if this is not the first generation)
         if (mCurrentGeneration != 0)
             evolve();
 
         // Evaluate the fitness of the population
-        evaluatePopulation();
+        evaluatePopulation(useThread);
 
         // Sort the population by fitness (descending)
         std::sort(mPopulation.begin(), mPopulation.end());
@@ -124,7 +116,7 @@ public:
 
     //==================================================================
     // Evaluate fitness for all individuals in the population
-    void evaluatePopulation()
+    void evaluatePopulation(bool useThread = true)
     {
         const uint32_t simStartSeed = 1134;
 
@@ -133,8 +125,7 @@ public:
         // Evaluate each individual's fitness in parallel
         for (auto& individual : mPopulation)
         {
-            pt.AddTask([&]()
-            {
+            auto task = [&]() {
                 double sum = 0.0;
                 for (size_t i = 0; i < SIM_VARIANTS_N; ++i)
                 {
@@ -144,7 +135,11 @@ public:
                 }
 
                 individual.fitness = sum / (double)SIM_VARIANTS_N;
-            });
+            };
+            if (useThread)
+                pt.AddTask(task);
+            else
+                task();
         }
     }
 
@@ -213,40 +208,22 @@ public:
     Individual Crossover(const Individual& parent1, const Individual& parent2)
     {
         // Get layer parameter structures from parents
-        const auto& layers1 = parent1.network.GetLayerParameters();
-        const auto& layers2 = parent2.network.GetLayerParameters();
-
-        // Ensure layer structures are compatible (basic size check)
-        assert(layers1.size() == layers2.size());
+        const NeuralNet& networkP1 = parent1.network;
+        const NeuralNet& networkP2 = parent2.network;
 
         // Create a structure for the child's layer parameters, initialized from parent1
-        std::vector<LayerParameters> childLayers = layers1;
+        NeuralNet childNet;
+
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
         // Iterate through layers and perform uniform crossover for weights and biases
-        for (size_t i = 0; i < childLayers.size(); ++i)
+        childNet.foreachParameters([&](int layer, int row, int col, T& param)
         {
-            // Crossover weights
-            assert(layers1[i].weights.size() == layers2[i].weights.size());
-            for (size_t j = 0; j < childLayers[i].weights.size(); ++j)
-            {
-                if (dist(mRng) >= 0.5f) // Take from parent2 with 50% chance
-                    childLayers[i].weights[j] = layers2[i].weights[j];
-                // Otherwise, it keeps the value from parent1 (already copied)
-            }
-
-            // Crossover biases
-            assert(layers1[i].biases.size() == layers2[i].biases.size());
-            for (size_t j = 0; j < childLayers[i].biases.size(); ++j)
-            {
-                if (dist(mRng) >= 0.5f) // Take from parent2 with 50% chance
-                    childLayers[i].biases[j] = layers2[i].biases[j];
-            }
-        }
-
-        // Create a new network for the child and set its layer parameters
-        SimpleNeuralNet childNet(mNetworkArchitecture);
-        childNet.SetLayerParameters(childLayers);
+            if (dist(mRng) >= 0.5f)
+                param = networkP1.GetParameter(layer, row, col); // Take from parent1 with 50% chance
+            else
+                param = networkP2.GetParameter(layer, row, col); // Otherwise, take from parent2
+        });
 
         // Return a new individual containing the child network
         return Individual(childNet);
@@ -268,32 +245,19 @@ public:
     // Mutate an individual
     void mutate(Individual& individual)
     {
-        // Get a mutable reference to the layer parameters
-        std::vector<LayerParameters>& layers = individual.network.GetLayerParameters();
-
         std::uniform_real_distribution<float> shouldMutateDist(0.0f, 1.0f);
         // Note: USE_MUTATION_STDDEV is not easily adaptable here without recalculating stddev per layer/parameter type
         // Sticking to the simpler mutation strength for now.
         std::normal_distribution<float> mutationValueDist(0.0f, (float)mMutationStrength);
 
         // Iterate through layers, weights, and biases
-        for (auto& layer : layers) {
-            // Mutate weights
-            for (float& weight : layer.weights) {
-                if (shouldMutateDist(mRng) < mMutationRate) {
-                    weight += mutationValueDist(mRng);
-                    weight = std::clamp(weight, -1.0f, 1.0f); // Clamp
-                }
+        individual.network.foreachParameters([&](int layer, int row, int col, T& param) {
+            (void)layer, row, col;
+            if (shouldMutateDist(mRng) < mMutationRate) {
+                param += mutationValueDist(mRng);
+                param = std::clamp(param, -1.0f, 1.0f); // Clamp
             }
-            // Mutate biases
-            for (float& bias : layer.biases) {
-                if (shouldMutateDist(mRng) < mMutationRate) {
-                    bias += mutationValueDist(mRng);
-                    bias = std::clamp(bias, -1.0f, 1.0f); // Clamp
-                }
-            }
-        }
-        // No need to call SetLayerParameters as we modified the layers via reference
+        });
     }
 
     //==================================================================
@@ -304,7 +268,7 @@ public:
     //==================================================================
     double TestNetworkOnSimulation(
         uint32_t simulationSeed,
-        const SimpleNeuralNet& net) const
+        const NeuralNet& net) const
     {
         // Create a simulation with the given seed
         Simulation sim(mSimParams, simulationSeed);
@@ -313,7 +277,7 @@ public:
         while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < Simulation::MAX_TIME_S)
         {
             // Step the simulation forward...
-            sim.AnimateSim([&](const float* states, float* actions)
+            sim.AnimateSim([&](const NeuralNet::Inputs& states, NeuralNet::Outputs& actions)
             {
                 // states -> net -> actions
                 net.FeedForward(states, actions);
@@ -330,7 +294,7 @@ public:
     size_t GetPopulationSize() const { return mPopulationSize; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mMaxGenerations; }
     // Get the best network object found so far
-    const SimpleNeuralNet& GetBestIndividualNetwork() const { return mBestIndividual.network; }
+    const NeuralNet& GetBestIndividualNetwork() const { return mBestIndividual.network; }
     const std::vector<Individual>& GetPopulation() const { return mPopulation; }
 };
 

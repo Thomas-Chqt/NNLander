@@ -1,14 +1,8 @@
-#include <vector>
-#include <random>
-#include <algorithm>
-#include <cmath>
-#include <limits>
-
+#include <array>
 #include "raylib.h"
 #include "rlgl.h"
 #include "Simulation.h"
 #include "SimulationDisplay.h"
-#include "SimpleNeuralNet.h"
 #include "TrainingTaskRandom.h"
 #include "DrawUI.h"
 
@@ -19,17 +13,19 @@ static const float RESTART_DELAY = 2.0f;
 // Number of training epochs to run
 static const int MAX_TRAINING_EPOCHS = 100000;
 
-// Forward declarations
-static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask);
-
 //==================================================================
 // Network configuration
 //==================================================================
-static const std::vector<int> NETWORK_ARCHITECTURE = {
-    SIM_BRAINSTATE_N,             // Input layer: simulation state variables
+static constexpr std::array<int, 3> NETWORK_ARCHITECTURE = {
+    SIM_BRAINSTATE_N,              // Input layer: simulation state variables
     (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
     SIM_BRAINACTION_N             // Output layer: actions (up, left, right)
 };
+
+using TrainingTask = TrainingTaskRandom<float, NETWORK_ARCHITECTURE>;
+
+// Forward declarations
+static void drawUI(Simulation& sim, TrainingTask& trainingTask);
 
 //==================================================================
 // Main function
@@ -50,7 +46,7 @@ int main()
     Simulation sim(sp, seed);
 
     // Create the training task
-    TrainingTaskRandom trainingTask(sp, NETWORK_ARCHITECTURE, MAX_TRAINING_EPOCHS);
+    TrainingTask trainingTask(sp, MAX_TRAINING_EPOCHS);
 
     // No separate testNet needed, we'll use the one inside trainingTask
 
@@ -81,7 +77,7 @@ int main()
         else
         {
             // Animate the simulation using the best network from the training task
-            sim.AnimateSim([&](const float* states, float* actions)
+            sim.AnimateSim([&](const TrainingTask::NeuralNet::Inputs& states, TrainingTask::NeuralNet::Outputs& actions)
             {
                 // states -> bestNet -> actions
                 trainingTask.GetBestNetwork().FeedForward(states, actions);
@@ -108,7 +104,7 @@ int main()
 }
 
 //==================================================================
-static void drawUI(Simulation& sim, TrainingTaskRandom& trainingTask)
+static void drawUI(Simulation& sim, TrainingTask& trainingTask)
 {
     // Draw neural network visualization
     //if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)

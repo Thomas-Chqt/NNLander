@@ -24,18 +24,20 @@ static const double SIGMA = 0.5;             // Noise standard deviation
 static const double ALPHA = 0.40;            // Learning rate
 static const size_t NUM_PERTURBATIONS = 50;  // Number of perturbation pairs
 
-// Forward declarations
-static void drawUI(Simulation& sim, TrainingTaskRES& trainingTask); // Updated type
-
 //==================================================================
 // Network configuration
 //==================================================================
-static const std::vector<int> NETWORK_ARCHITECTURE = {
+static constexpr std::array<int, 4> NETWORK_ARCHITECTURE = {
     SIM_BRAINSTATE_N,             // Input layer: simulation state variables
     (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
     (int)((double)SIM_BRAINSTATE_N*1.25), // Hidden layer
     SIM_BRAINACTION_N             // Output layer: actions (up, left, right)
 };
+
+using TrainingTask = TrainingTaskRES<float, NETWORK_ARCHITECTURE>;
+
+// Forward declarations
+static void drawUI(Simulation& sim, TrainingTask& trainingTask);
 
 //==================================================================
 // Main function
@@ -56,13 +58,12 @@ int main()
     Simulation sim(sp, seed);
 
     // Create the training task
-    TrainingTaskRES::Params par;
-    par.architecture = NETWORK_ARCHITECTURE;
+    TrainingTask::Params par;
     par.maxGenerations = MAX_TRAINING_GENERATIONS;
     par.sigma = SIGMA;
     par.alpha = ALPHA;
     par.numPerturbations = NUM_PERTURBATIONS;
-    TrainingTaskRES trainingTask(par, sp);
+    TrainingTask trainingTask(par, sp);
 
     // We'll use the central network from trainingTask
 
@@ -106,7 +107,7 @@ int main()
         else
         {
             // Animate the simulation using the best network from the training task
-            sim.AnimateSim([&](const float* states, float* actions)
+            sim.AnimateSim([&](const TrainingTask::NeuralNet::Inputs& states, TrainingTask::NeuralNet::Outputs& actions)
             {
                 // states -> centralNet -> actions
                 trainingTask.GetCentralNetwork().FeedForward(states, actions); // Use central network
@@ -133,7 +134,7 @@ int main()
 }
 
 //==================================================================
-static void drawUI(Simulation& sim, TrainingTaskRES& trainingTask) // Updated type
+static void drawUI(Simulation& sim, TrainingTask& trainingTask)
 {
     // Draw neural network visualization
     //if (!sim.mLander.mStateIsLanded && !sim.mLander.mStateIsCrashed)
