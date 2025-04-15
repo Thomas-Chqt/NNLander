@@ -1,9 +1,9 @@
 #ifndef TRAININGTASKRES_H
 #define TRAININGTASKRES_H
 
+#include <cstddef>
 #include <random>
 #include <vector>
-#include <numeric>
 #include <limits> // Needed for numeric_limits
 #include <cmath>  // For std::sqrt, std::exp
 #include <cassert> // For assert
@@ -78,53 +78,6 @@ public:
     }
 
     //==================================================================
-    // Flatten network parameters into a single vector
-    //==================================================================
-    // std::vector<float> flattenParameters(const SimpleNeuralNet& net) const
-    // {
-    //     const auto& layers = net.GetLayerParameters();
-    //     std::vector<float> flatParams;
-    //     flatParams.reserve(mTotalParams); // Reserve space
-
-    //     for (const auto& layer : layers)
-    //     {
-    //         flatParams.insert(flatParams.end(), layer.weights.begin(), layer.weights.end());
-    //         flatParams.insert(flatParams.end(), layer.biases.begin(), layer.biases.end());
-    //     }
-    //     assert(flatParams.size() == mTotalParams);
-    //     return flatParams;
-    // }
-
-    //==================================================================
-    // Unflatten parameters from a vector into layer structure
-    //==================================================================
-    // std::vector<LayerParameters> unflattenParameters(const std::vector<float>& flatParams) const
-    // {
-    //     assert(flatParams.size() == mTotalParams);
-    //     auto layers = mCentralNetwork.GetLayerParameters(); // Get structure
-    //     size_t currentIdx = 0;
-
-    //     for (auto& layer : layers)
-    //     {
-    //         size_t weightCount = layer.weights.size();
-    //         std::copy(
-    //             flatParams.begin() + currentIdx,
-    //             flatParams.begin() + currentIdx + weightCount,
-    //             layer.weights.begin());
-    //         currentIdx += weightCount;
-
-    //         size_t biasCount = layer.biases.size();
-    //         std::copy(
-    //             flatParams.begin() + currentIdx,
-    //             flatParams.begin() + currentIdx + biasCount,
-    //             layer.biases.begin());
-    //         currentIdx += biasCount;
-    //     }
-    //     assert(currentIdx == mTotalParams);
-    //     return layers;
-    // }
-
-    //==================================================================
     // Evaluate fitness for a given network over multiple simulation variants
     //==================================================================
     double evaluateNetwork(const NeuralNet& net) const
@@ -140,7 +93,6 @@ public:
         return totalScore / (double)SIM_VARIANTS_N;
     }
 
-
     //==================================================================
     // Run a single training iteration (one ES update step)
     //==================================================================
@@ -148,7 +100,6 @@ public:
     {
         if (IsTrainingComplete()) return;
 
-        std::vector<float> centralParams = flattenParameters(mCentralNetwork);
         std::vector<float> gradientEstimate(mTotalParams, 0.0f);
 
         // Store results from perturbations
@@ -176,31 +127,33 @@ public:
             results[i].epsilon = epsilon; // Copy epsilon
 
             // Create perturbed parameters theta_plus and theta_minus
-            std::vector<float> params_plus = centralParams;
-            std::vector<float> params_minus = centralParams;
+            NeuralNet net_plus;
+            NeuralNet net_minus;
+            size_t j = 0;
+            mCentralNetwork.foreachParameters([&](int layer, int row, int col, T& central_param){
+                const auto perturbation = (float)mAdaptedSigma * epsilon[j];
+                net_plus.GetParameter(layer, row, col) = central_param + perturbation;
+                net_minus.GetParameter(layer, row, col) = central_param - perturbation;
+                j++;
+            });
+#if 0
             for(size_t j = 0; j < mTotalParams; ++j)
             {
-                const auto perturbation = (float)mAdaptedSigma * epsilon[j];
-                params_plus[j] += perturbation;
-                params_minus[j] -= perturbation;
                 // Optional: Clamp parameters if needed, though often omitted in ES
-                // params_plus[j] = std::clamp(params_plus[j], -1.0f, 1.0f);
-                // params_minus[j] = std::clamp(params_minus[j], -1.0f, 1.0f);
+                params_plus[j] = std::clamp(params_plus[j], -1.0f, 1.0f);
+                params_minus[j] = std::clamp(params_minus[j], -1.0f, 1.0f);
             }
+#endif
 
             // --- Evaluate theta_plus ---
-            pt.AddTask([this, params_plus = std::move(params_plus), i, &results]()
+            pt.AddTask([this, net_plus = std::move(net_plus), i, &results]()
             {
-                SimpleNeuralNet net_plus(mPar.architecture);
-                net_plus.SetLayerParameters(unflattenParameters(params_plus));
                 results[i].fitness_plus = evaluateNetwork(net_plus);
             });
 
             // --- Evaluate theta_minus ---
-             pt.AddTask([this, params_minus = std::move(params_minus), i, &results]()
+             pt.AddTask([this, net_minus = std::move(net_minus), i, &results]()
              {
-                SimpleNeuralNet net_minus(mPar.architecture);
-                net_minus.SetLayerParameters(unflattenParameters(params_minus));
                 results[i].fitness_minus = evaluateNetwork(net_minus);
             });
         }
@@ -233,15 +186,14 @@ public:
 
         // --- Update Central Parameters ---
         const auto scaleFactor = mAdaptedAlpha / (2.0 * mPar.numPerturbations * mAdaptedSigma);
-        for (size_t j = 0; j < mTotalParams; ++j)
-        {
-            centralParams[j] += (float)(scaleFactor * gradientEstimate[j]);
-             // Optional: Clamp parameters
-             // centralParams[j] = std::clamp(centralParams[j], -1.0f, 1.0f);
-        }
+        size_t j = 0;
+        mCentralNetwork.foreachParameters([&](int, int, int, T& central_param){
+            central_param += (float)(scaleFactor * gradientEstimate[j]);
+            // Optional: Clamp parameters
+            // centralParams[j] = std::clamp(centralParams[j], -1.0f, 1.0f);
+            j++;
 
-        // Set updated parameters in the central network
-        mCentralNetwork.SetLayerParameters(unflattenParameters(centralParams));
+        });
 
         // Evaluate the updated central network and update best score if improved
         double currentCentralScore = evaluateNetwork(mCentralNetwork);
@@ -263,7 +215,7 @@ public:
     //==================================================================
     double TestNetworkOnSimulation(
         uint32_t simulationSeed,
-        const SimpleNeuralNet& net) const
+        const NeuralNet& net) const
     {
         // Create a simulation with the given seed
         Simulation sim(mSimParams, simulationSeed);
@@ -272,7 +224,7 @@ public:
         while (!sim.IsSimulationComplete() && sim.GetElapsedTimeS() < Simulation::MAX_TIME_S)
         {
             // Step the simulation forward...
-            sim.AnimateSim([&](const float* states, float* actions)
+            sim.AnimateSim([&](const NeuralNet::Inputs& states, NeuralNet::Outputs& actions)
             {
                 // states -> net -> actions
                 net.FeedForward(states, actions);
@@ -291,7 +243,7 @@ public:
     size_t GetNumPerturbations() const { return mPar.numPerturbations; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mPar.maxGenerations; }
     // Get the central network object
-    const SimpleNeuralNet& GetCentralNetwork() const { return mCentralNetwork; }
+    const NeuralNet& GetCentralNetwork() const { return mCentralNetwork; }
 };
 
 #endif // TRAININGTASKRES_H

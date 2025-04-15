@@ -312,7 +312,7 @@ public:
 
         // 2. Get the brain actions
         Eigen::Vector<float, SIM_BRAINACTION_N> actions;
-        getBrainActions(simState.data(), actions.data());
+        getBrainActions(simState, actions);
 
         // 3. Convert the brain actions to the simulation variables
         mLander.mControl_UpThrust = actions[SIM_BRAINACTION_UP] > 0.5f;

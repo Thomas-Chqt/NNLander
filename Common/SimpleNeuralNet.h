@@ -130,7 +130,7 @@ The example below is just for illustration.
 
     void FeedForward(const Inputs& pInputs, Outputs& pOutputs) const
     {
-        std::apply([&](const auto&... params) { FeedForward(pInputs, pOutputs, params...); }, mParams);
+        std::apply([&](const auto&... params) { this->FeedForward(pInputs, pOutputs, params...); }, mParams);
     }
     
     // Get the total number of parameters (weights + biases) in the network
