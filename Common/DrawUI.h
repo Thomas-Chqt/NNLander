@@ -88,11 +88,9 @@ inline void DrawNeuralNetwork(const SimpleNeuralNet<T, netArch>& net)
     const float startY = 90.0f;
     const int fsize = 15;
 
-    const typename decltype(net)::Parameters& params = net.GetParameters(); // Get parameters
-
     // Draw connections first (so they appear behind nodes)
 
-    net.foreachParameters([&](int layerIdx, int row, int col, T& param){
+    net.foreachParameters([&](int layerIdx, int row, int col, const T& param){
         const float prevLayerY = startY + (float)layerIdx * layerSpacing;
         int prevLayerSize = netArch[layerIdx];
 

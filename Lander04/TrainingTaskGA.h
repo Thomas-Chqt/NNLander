@@ -26,6 +26,8 @@ private:
     {
         NeuralNet network; // Neural network object
         double fitness = -std::numeric_limits<double>::max();  // Fitness score (-infinity by default)
+        
+        Individual() = default;
 
         // Constructor with existing network and optional fitness
         Individual(const  NeuralNet& net, double fitnessScore = -std::numeric_limits<double>::max())
@@ -207,16 +209,13 @@ public:
     // Crossover two parents to create a child
     Individual Crossover(const Individual& parent1, const Individual& parent2)
     {
-        // Get layer parameter structures from parents
         const NeuralNet& networkP1 = parent1.network;
         const NeuralNet& networkP2 = parent2.network;
 
-        // Create a structure for the child's layer parameters, initialized from parent1
         NeuralNet childNet;
 
         std::uniform_real_distribution<float> dist(0.0f, 1.0f);
 
-        // Iterate through layers and perform uniform crossover for weights and biases
         childNet.foreachParameters([&](int layer, int row, int col, T& param)
         {
             if (dist(mRng) >= 0.5f)
@@ -225,7 +224,6 @@ public:
                 param = networkP2.GetParameter(layer, row, col); // Otherwise, take from parent2
         });
 
-        // Return a new individual containing the child network
         return Individual(childNet);
     }
 
@@ -251,8 +249,7 @@ public:
         std::normal_distribution<float> mutationValueDist(0.0f, (float)mMutationStrength);
 
         // Iterate through layers, weights, and biases
-        individual.network.foreachParameters([&](int layer, int row, int col, T& param) {
-            (void)layer, row, col;
+        individual.network.foreachParameters([&](int, int, int, T& param) {
             if (shouldMutateDist(mRng) < mMutationRate) {
                 param += mutationValueDist(mRng);
                 param = std::clamp(param, -1.0f, 1.0f); // Clamp

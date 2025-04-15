@@ -80,8 +80,7 @@ int main()
             // Run a single generation per frame to avoid blocking the UI too much
             trainingTask.RunIteration();
         }
-        else
-        if (!hasTrainingCompleted)
+        else if (!hasTrainingCompleted)
         {
             // Training just completed
             auto trainingEndTime = std::chrono::steady_clock::now();

@@ -35,8 +35,7 @@ static void  getFixedBrainActions(const Eigen::Vector<float, SIM_BRAINSTATE_N>& 
 
     if (isLanderTooFarLeft && !isLanderMovingLeft)
         out_actions[SIM_BRAINACTION_LEFT] = 1.0f; // Apply LEFT thrust
-    else
-    if (isLanderTooFarRight && !isLanderMovingRight)
+    else if (isLanderTooFarRight && !isLanderMovingRight)
         out_actions[SIM_BRAINACTION_RIGHT] = 1.0f; // Apply RIGHT thrust
 
     // Try to keep the lander from crashing by selectively applying

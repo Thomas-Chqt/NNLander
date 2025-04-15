@@ -47,6 +47,12 @@ concept OnParamFunc = requires(T t, int l, int r, int c, Y& param)
     { t(l, r, c, param) };
 };
 
+template<typename T, typename Y>
+concept OnConstParamFunc = requires(T t, int l, int r, int c, const Y& param)
+{
+    { t(l, r, c, param) };
+};
+
 template<std::floating_point T, NetArch auto netArch>
 class SimpleNeuralNet
 {
@@ -94,7 +100,7 @@ The example below is just for illustration.
 */
     SimpleNeuralNet()
     {
-        assert(netArch.size() < 2); // TODO : check at compile time
+        assert(netArch.size() >= 2); // TODO : check at compile time
     }
 
     // Copy constructor
@@ -149,17 +155,16 @@ The example below is just for illustration.
     {
         // each element of the array return the r, c of one layer, this allow to get a layer with a
         // non constexpr layer index
-        static constexpr auto getParamsFuncArray = []<size_t... Idxs>(std::index_sequence<Idxs...>)
-            -> std::array<std::function<T&(const Parameters&, int, int)>, std::tuple_size_v<Parameters>> {
-            return { [](const Parameters& p, int r, int c) -> T& { return std::get<Idxs>(p)(r, c); }... };
+        static constexpr auto getParamsFuncArray = []<size_t... Idxs>(std::index_sequence<Idxs...>) {
+            return std::array<T&(*)(Parameters&, int, int), std::tuple_size_v<Parameters>>{ [](Parameters& p, int r, int c) -> T& { return std::get<Idxs>(p)(r, c); }... };
         }(std::make_index_sequence<std::tuple_size_v<Parameters>>{});
 
         return getParamsFuncArray[layer](mParams, row, col);
     }
 
-    const T& GetParameters(int layer, int row, int col) const
+    const T& GetParameter(int layer, int row, int col) const
     {
-        return const_cast<std::remove_const<decltype(this)>>(this).GetParameters(layer, row, col);
+        return const_cast<SimpleNeuralNet*>(this)->GetParameter(layer, row, col);
     }
 
     void foreachParameters(const OnParamFunc<T> auto& func)
@@ -176,6 +181,11 @@ The example below is just for illustration.
         [&]<size_t... Idxs>(std::index_sequence<Idxs...>) {
             (fillLayer.template operator()<Idxs>(), ...);
         }(std::make_index_sequence<std::tuple_size_v<std::remove_cvref_t<decltype(mParams)>>>{});
+    }
+
+    void foreachParameters(const OnConstParamFunc<T> auto& func) const
+    {
+        const_cast<SimpleNeuralNet*>(this)->foreachParameters([&](int l, int r, int c, T& param){ func(l, r, c, param); });
     }
 
     // Initialize parameters with random values
@@ -213,7 +223,7 @@ The example below is just for illustration.
         }
 #elif SNN_INIT_XAVIER_UNIFORM
         std::mt19937 rng(seed);
-        foreachParameters([&](int layerIdx, int row, int col, int& param){
+        foreachParameters([&](int layerIdx, int row, int col, float& param){
             (void)row;
             // --- Initialize Weights (Xavier Uniform) ---
             auto fan_in = netArch[layerIdx];
@@ -237,14 +247,14 @@ private:
     //float Activate(float x) const { return x > 0.0f ? x : 0.01f * x; } // Leaky ReLU
     
     template<int I, int O>
-    void FeedForward(const Eigen::Vector<T, I>& pInputs, Eigen::Vector<T, O>& pOutputs, const Eigen::Matrix<T, O, I+1>& pParams)
+    void FeedForward(const Eigen::Vector<T, I>& pInputs, Eigen::Vector<T, O>& pOutputs, const Eigen::Matrix<T, O, I+1>& pParams) const
     {
         pOutputs = (pParams * pInputs.homogeneous()).unaryExpr([&](T x) { return Activate(x); });
     }
 
     template<int I, int O>
     void FeedForward(const Eigen::Vector<T, I>& pInputs, Eigen::Vector<T, O>& pOutputs, const EigenMatrixC<T, I+1> auto& pParams,
-                     const EigenMatrix<T> auto&  pRemaingParams, const EigenMatrix<T> auto& ... pRemaingParamsPack)
+                     const EigenMatrix<T> auto&  pRemaingParams, const EigenMatrix<T> auto& ... pRemaingParamsPack) const
     {
         Eigen::Vector<T, std::remove_cvref_t<decltype(pParams)>::RowsAtCompileTime> outputs;
         FeedForward(pInputs, outputs, pParams);

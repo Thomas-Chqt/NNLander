@@ -59,7 +59,6 @@ public:
     TrainingTaskRES(const Params& par, const SimParams& sp)
         : mPar(par)
         , mSimParams(sp)
-        , mCentralNetwork(par.architecture) // Initialize central network
         , mRng(par.seed)
     {
         // Initialize central network with random parameters
