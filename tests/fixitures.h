@@ -36,6 +36,23 @@ public:
     using ParamArray = std::array<float, CalcTotalParameters(netArch)>;
 
 protected:
+    void initInputsAndParams(int seed, float low, float high)
+    {
+        std::mt19937 mRng(seed);
+        std::normal_distribution<float> dist(low, high);
+
+        InputArray inputs;
+        for (auto& input : inputs)
+            input = dist(mRng);
+        this->setInputs(inputs);
+
+        ParamArray params;
+        for (auto& param : params)
+            param = dist(mRng);
+        this->setParams(params);
+    }
+
+
     void setInputs(const InputArray& inputs)
     {
         setInputs_dp1(inputs);
@@ -59,14 +76,11 @@ protected:
         return output;
     }
 
-    OutputArray FeedForward_tc1()
+    Eigen::Vector<float, netArch.back()> FeedForward_tc1()
     {
-        OutputArray output;
-        Eigen::Vector<float, netArch.back()> outputVec;
-        std::apply([&](const auto&... params) { tc1::FeedForward(m_tc1Inputs, outputVec, params...); }, m_tc1Params);
-        for (size_t i = 0; auto& e : output)
-            e = outputVec[i++];
-        return output;
+        Eigen::Vector<float, netArch.back()> outputs;
+        std::apply([&](const auto&... params) { tc1::FeedForward(m_tc1Inputs, outputs, params...); }, m_tc1Params);
+        return outputs;
     }
 
     OutputArray FeedForward_dp2()
@@ -76,14 +90,11 @@ protected:
         return output;
     }
 
-    OutputArray FeedForward_cur()
+    ::SimpleNeuralNet<float, netArch>::Outputs FeedForward_cur()
     {
-        OutputArray output;
-        typename ::SimpleNeuralNet<float, netArch>::Outputs outputVec;
-        m_curNet.FeedForward(m_curInputs, outputVec);
-        for (size_t i = 0; auto& e : output)
-            e = outputVec[i++];
-        return output;
+        typename ::SimpleNeuralNet<float, netArch>::Outputs outputs;
+        m_curNet.FeedForward(m_curInputs, outputs);
+        return outputs;
     }
 
 private:
@@ -95,9 +106,7 @@ private:
     void setInputs_tc1(const InputArray& inputs)
     {
         for (size_t i = 0; i < inputs.size(); i++)
-        {
             m_tc1Inputs[i] = inputs[i];
-        }
     }
 
     void setInputs_dp2(const InputArray& inputs)
@@ -108,9 +117,7 @@ private:
     void setInputs_cur(const InputArray& inputs)
     {
         for (size_t i = 0; i < inputs.size(); i++)
-        {
             m_curInputs[i] = inputs[i];
-        }
     }
 
     void setParams_dp1(const ParamArray& params)
