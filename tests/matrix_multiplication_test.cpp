@@ -1,5 +1,5 @@
-#include <Eigen/Dense>
 #include <gtest/gtest.h>
+#include <Eigen/Dense>
 
 TEST(matrix_multiplication, comma_init)
 {

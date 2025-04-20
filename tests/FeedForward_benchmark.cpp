@@ -1,3 +1,4 @@
+#if 0
 #define BENCHMARK_FIXITURE
 
 #include "fixiture.hpp"
@@ -49,3 +50,4 @@ BENCHMARK_TEMPLATE_F(FeedForwardBenchmarck, matrix10x20x30x40x30x20x10, std::arr
         std::apply([&](const auto&... matrices) { ::FeedForward(inputs2, outputs2, matrices...); }, params2);
     }
 }
+#endif
