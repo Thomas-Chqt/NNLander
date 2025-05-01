@@ -6,7 +6,6 @@
 #include "dp2/SimpleNeuralNet.h"
 #include "tc1/TemplateFeedForward.hpp"
 #include <cstddef>
-#include <iostream>
 #include <vector>
 
 #ifdef BENCHMARK_FIXITURE

@@ -3,8 +3,16 @@
 
 //==================================================================
 #include <cassert>
+#include <condition_variable>
+#include <cstddef>
 #include <cstdint>
 #include <array>
+#include <functional>
+#include <mutex>
+#include <queue>
+#include <vector>
+#include <thread>
+#include <atomic>
 
 //==================================================================
 // Improved random number generator class - uses xoshiro256++ algorithm
@@ -75,35 +83,82 @@ public:
 //==================================================================
 // ParallelTasks class - handles parallel execution of tasks
 //==================================================================
-#include <future>
-#include <thread>
 
 class ParallelTasks
 {
-    std::vector<std::future<void>> mFutures;
-    unsigned int mThreadsN {};
-public:
-    ParallelTasks() : mThreadsN(std::thread::hardware_concurrency()) {}
+    std::vector<std::thread> mThreads;
+    std::queue<std::function<void()>> mTasks;
 
-    void AddTask(std::function<void()> task)
+    std::mutex mMutex;
+    std::condition_variable mCondVar;
+    bool mTerminate = false;
+    std::atomic<int> mRunningTaskCount = 0;
+
+public:
+    ParallelTasks()
     {
-        if (mFutures.size() >= mThreadsN)
+        mThreads.resize(std::thread::hardware_concurrency());
+        for (auto& el : mThreads)
         {
-            mFutures.front().wait();
-            mFutures.erase(mFutures.begin());
+            el = std::thread([&]() {
+                while (true)
+                {
+                    std::function<void()> task;
+                    {
+                        std::unique_lock<std::mutex> lock(mMutex);
+                        mCondVar.wait(lock, [this]() { return mTerminate || mTasks.empty() == false; });
+                        if (mTerminate)
+                            break;
+                        task = std::move(mTasks.front());
+                        mTasks.pop();
+                    }
+                    mRunningTaskCount++;
+                    task();
+                    mRunningTaskCount--;
+                    mRunningTaskCount.notify_all();
+                }
+            });
         }
-        mFutures.push_back(std::async(std::launch::async, task));
+    }
+
+    void AddTask(const std::function<void()>& task)
+    {
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mTasks.push(task);
+        }
+        mCondVar.notify_one();
     }
 
     // Wait for all pending tasks to complete
     void WaitAll()
     {
-        for (auto& future : mFutures)
+        while (true)
         {
-            if (future.valid())
-                future.wait();
+            std::function<void()> task;
+            {
+                std::unique_lock<std::mutex> lock(mMutex);
+                if (mTasks.empty())
+                    break;
+                task = std::move(mTasks.front());
+                mTasks.pop();
+            }
+            task();
         }
-        mFutures.clear();
+        int old;
+        while ((old = mRunningTaskCount) > 0)
+            mRunningTaskCount.wait(old);
+    }
+
+    ~ParallelTasks()
+    {
+        {
+            std::lock_guard<std::mutex> lock(mMutex);
+            mTerminate = true;
+        }
+        mCondVar.notify_all();
+        for (auto& t : mThreads)
+            t.join();
     }
 };
 

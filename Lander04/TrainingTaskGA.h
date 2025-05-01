@@ -60,6 +60,9 @@ private:
     // Random number generator
     std::mt19937 mRng;
 
+    // Parallelization system
+    ParallelTasks mPllTasks;
+
 public:
     TrainingTaskGA(
         const SimParams& sp,
@@ -122,8 +125,6 @@ public:
     {
         const uint32_t simStartSeed = 1134;
 
-        ParallelTasks pt; // Parallelization system
-
         // Evaluate each individual's fitness in parallel
         for (auto& individual : mPopulation)
         {
@@ -139,10 +140,12 @@ public:
                 individual.fitness = sum / (double)SIM_VARIANTS_N;
             };
             if (useThread)
-                pt.AddTask(task);
+                mPllTasks.AddTask(task);
             else
                 task();
         }
+        if (useThread)
+            mPllTasks.WaitAll();
     }
 
     //==================================================================

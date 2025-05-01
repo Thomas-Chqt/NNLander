@@ -28,6 +28,7 @@ BENCHMARK_TEMPLATE_F(FeedForwardBenchmarck, 10x3cur, std::array<int, 2>{10, 3})(
         this->FeedForward_cur();
     }
 }
+
 ////////////////////////////
 
 

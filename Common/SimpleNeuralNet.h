@@ -3,14 +3,9 @@
 
 #include <array>
 #include <concepts>
-#include <functional>
 #include <tuple>
-#include <vector>
-#include <algorithm>
 #include <cmath>
 #include <random> // Needed for InitializeRandomParameters
-#include <stdexcept> // Needed for runtime_error
-#include <numeric>   // Needed for accumulate in GetFlatParameters
 #include <cassert>   // For assert
 #include <Eigen/Dense>
 

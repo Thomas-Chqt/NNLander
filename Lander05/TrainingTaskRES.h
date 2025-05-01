@@ -55,6 +55,9 @@ private:
 
     size_t mCurrentGeneration = 0;
 
+    // Parallelization system
+    ParallelTasks mPllTasks;
+
 public:
     TrainingTaskRES(const Params& par, const SimParams& sp)
         : mPar(par)
@@ -95,7 +98,7 @@ public:
     //==================================================================
     // Run a single training iteration (one ES update step)
     //==================================================================
-    void RunIteration()
+    void RunIteration(bool useThread = true)
     {
         if (IsTrainingComplete()) return;
 
@@ -109,8 +112,6 @@ public:
             std::vector<float> epsilon;
         };
         std::vector<PerturbationResult> results(mPar.numPerturbations);
-
-        ParallelTasks pt; // Parallelization system
 
         std::normal_distribution<float> noiseDist{0.0f, 1.0f}; // Standard normal distribution
 
@@ -145,20 +146,28 @@ public:
 #endif
 
             // --- Evaluate theta_plus ---
-            pt.AddTask([this, net_plus = std::move(net_plus), i, &results]()
-            {
-                results[i].fitness_plus = evaluateNetwork(net_plus);
-            });
+            auto thetaPlusTask = [this, net_plus = std::move(net_plus), i, &results]()
+                {
+                    results[i].fitness_plus = evaluateNetwork(net_plus);
+                };
+            if (useThread)
+                mPllTasks.AddTask(thetaPlusTask);
+            else
+                thetaPlusTask();
 
             // --- Evaluate theta_minus ---
-             pt.AddTask([this, net_minus = std::move(net_minus), i, &results]()
-             {
-                results[i].fitness_minus = evaluateNetwork(net_minus);
-            });
+            auto thetaMinusTask = [this, net_minus = std::move(net_minus), i, &results]()
+                {
+                    results[i].fitness_minus = evaluateNetwork(net_minus);
+                };
+            if (useThread)
+                mPllTasks.AddTask(thetaMinusTask);
+            else
+                thetaMinusTask();
         }
 
         // Wait for all evaluations to complete
-        pt.WaitAll();
+        mPllTasks.WaitAll();
 
 #if 0
         if (!(mCurrentGeneration % 100)) // Log every 10 generations to avoid spam

@@ -96,7 +96,7 @@ inline void DrawLander(const Lander& lander, const SimParams& sp)
 
     // Use a Random Generator with the current draw coordinates as seed
     // This gives different but consistent flame patterns for each position
-    RandomGenerator rng(*(uint64_t*)&drawX ^ (*(uint64_t*)&drawY << 32));
+    RandomGenerator rng(*(uint32_t*)&drawX ^ (*(uint32_t*)&drawY << 16));
 
     // Display a little flame if the thruster is on
     if (lander.mControl_UpThrust)
