@@ -16,7 +16,7 @@ static const float RESTART_DELAY = 2.0f;
 // Number of training generations to run
 static const int MAX_TRAINING_GENERATIONS = 10000;
 // Size of population
-static const int POPULATION_SIZE = 50;
+static const int POPULATION_SIZE = 200;
 // Mutation parameters
 static const double MUTATION_RATE = 0.1;
 static const double MUTATION_STRENGTH = 0.3;
@@ -70,17 +70,12 @@ int main()
     // Variables to track training time
     auto trainingStartTime = std::chrono::steady_clock::now();
     bool hasTrainingCompleted = false;
+    trainingTask.startTraining();
 
     // Main game loop
     while (!WindowShouldClose())
     {
-        // Run training iterations in the background
-        if (!trainingTask.IsTrainingComplete())
-        {
-            // Run a single generation per frame to avoid blocking the UI too much
-            trainingTask.RunIteration();
-        }
-        else if (!hasTrainingCompleted)
+        if (!hasTrainingCompleted && trainingTask.IsTrainingComplete())
         {
             // Training just completed
             auto trainingEndTime = std::chrono::steady_clock::now();

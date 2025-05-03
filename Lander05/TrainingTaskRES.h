@@ -43,6 +43,7 @@ private:
     // Central network being trained
     NeuralNet mCentralNetwork;
     double mBestScore = -std::numeric_limits<double>::max(); // Track the best score achieved by the central network
+    std::mutex mCentralNetworkMtx;
 
     // Random number generator
     std::mt19937 mRng;
@@ -57,6 +58,8 @@ private:
 
     // Parallelization system
     ParallelTasks mPllTasks;
+
+    std::thread mTrainingThread;
 
 public:
     TrainingTaskRES(const Params& par, const SimParams& sp)
@@ -77,6 +80,21 @@ public:
         // Initial evaluation of the central network
         mBestScore = evaluateNetwork(mCentralNetwork);
         printf("[DEBUG] Initial Central Network Score: %.4f\n", mBestScore); // Log initial score
+    }
+
+    ~TrainingTaskRES()
+    {
+        mTrainingThread.join();
+    }
+
+    void startTraining(bool useThread = true)
+    {
+        mTrainingThread = std::thread([&]() {
+            while (IsTrainingComplete() == false)
+            {
+                RunIteration(useThread);
+            }
+        });
     }
 
     //==================================================================
@@ -130,12 +148,15 @@ public:
             NeuralNet net_plus;
             NeuralNet net_minus;
             size_t j = 0;
-            mCentralNetwork.foreachParameters([&](int layer, int row, int col, T& central_param){
-                const auto perturbation = (float)mAdaptedSigma * epsilon[j];
-                net_plus.GetParameter(layer, row, col) = central_param + perturbation;
-                net_minus.GetParameter(layer, row, col) = central_param - perturbation;
-                j++;
-            });
+            {
+                std::lock_guard<std::mutex> lock(mCentralNetworkMtx);
+                mCentralNetwork.foreachParameters([&](int layer, int row, int col, T& central_param){
+                    const auto perturbation = (float)mAdaptedSigma * epsilon[j];
+                    net_plus.GetParameter(layer, row, col) = central_param + perturbation;
+                    net_minus.GetParameter(layer, row, col) = central_param - perturbation;
+                    j++;
+                });
+            }
 #if 0
             for(size_t j = 0; j < mTotalParams; ++j)
             {
@@ -195,16 +216,19 @@ public:
         // --- Update Central Parameters ---
         const auto scaleFactor = mAdaptedAlpha / (2.0 * mPar.numPerturbations * mAdaptedSigma);
         size_t j = 0;
-        mCentralNetwork.foreachParameters([&](int, int, int, T& central_param){
-            central_param += (float)(scaleFactor * gradientEstimate[j]);
-            // Optional: Clamp parameters
-            // centralParams[j] = std::clamp(centralParams[j], -1.0f, 1.0f);
-            j++;
+        double currentCentralScore;
+        {
+            std::lock_guard<std::mutex> lock(mCentralNetworkMtx);
+            mCentralNetwork.foreachParameters([&](int, int, int, T& central_param){
+                central_param += (float)(scaleFactor * gradientEstimate[j]);
+                // Optional: Clamp parameters
+                // centralParams[j] = std::clamp(centralParams[j], -1.0f, 1.0f);
+                j++;
 
-        });
-
+            });
         // Evaluate the updated central network and update best score if improved
-        double currentCentralScore = evaluateNetwork(mCentralNetwork);
+            currentCentralScore = evaluateNetwork(mCentralNetwork);
+        }
         if (currentCentralScore > mBestScore) {
             mBestScore = currentCentralScore;
             // Could potentially save the best network parameters here if needed
@@ -251,7 +275,10 @@ public:
     size_t GetNumPerturbations() const { return mPar.numPerturbations; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mPar.maxGenerations; }
     // Get the central network object
-    const NeuralNet& GetCentralNetwork() const { return mCentralNetwork; }
+    NeuralNet& GetCentralNetwork() {
+        std::lock_guard<std::mutex> lock(mCentralNetworkMtx);
+        return mCentralNetwork;
+    }
 };
 
 #endif // TRAININGTASKRES_H

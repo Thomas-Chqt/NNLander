@@ -18,7 +18,7 @@ static const int MAX_TRAINING_GENERATIONS = 10000;
 // REINFORCE-ES Hyperparameters (NOTE: internally scaled by params count)
 static const double SIGMA = 0.5;             // Noise standard deviation
 static const double ALPHA = 0.40;            // Learning rate
-static const size_t NUM_PERTURBATIONS = 50;  // Number of perturbation pairs
+static const size_t NUM_PERTURBATIONS = 100;  // Number of perturbation pairs
 
 //==================================================================
 // Network configuration
@@ -68,17 +68,12 @@ int main()
     // Variables to track training time
     auto trainingStartTime = std::chrono::steady_clock::now();
     bool hasTrainingCompleted = false;
+    trainingTask.startTraining();
 
     // Main game loop
     while (!WindowShouldClose())
     {
-        // Run training iterations in the background
-        if (!trainingTask.IsTrainingComplete())
-        {
-            // Run a single generation per frame to avoid blocking the UI too much
-            trainingTask.RunIteration();
-        }
-        else if (!hasTrainingCompleted)
+        if (!hasTrainingCompleted && trainingTask.IsTrainingComplete())
         {
             // Training just completed
             auto trainingEndTime = std::chrono::steady_clock::now();

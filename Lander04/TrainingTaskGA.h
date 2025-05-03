@@ -1,10 +1,13 @@
 #ifndef TRAININGTASKGA_H
 #define TRAININGTASKGA_H
 
+#include <future>
+#include <mutex>
 #include <random>
 #include <algorithm>
 #include <numeric>
 #include <limits> // Needed for numeric_limits
+#include <thread>
 #include "Utils.h"
 #include "SimpleNeuralNet.h"
 #include "Simulation.h"
@@ -56,12 +59,15 @@ private:
     // Population
     std::vector<Individual> mPopulation;
     Individual mBestIndividual;
+    std::mutex mBestIndividualMtx;
 
     // Random number generator
     std::mt19937 mRng;
 
     // Parallelization system
     ParallelTasks mPllTasks;
+
+    std::thread mTrainingThread;
 
 public:
     TrainingTaskGA(
@@ -95,6 +101,21 @@ public:
         }
     }
 
+    ~TrainingTaskGA()
+    {
+        mTrainingThread.join();
+    }
+
+    void startTraining(bool useThread = true)
+    {
+        mTrainingThread = std::thread([&]() {
+            while (IsTrainingComplete() == false)
+            {
+                RunIteration(useThread);
+            }
+        });
+    }
+
     //==================================================================
     // Run a single training iteration (one generation)
     void RunIteration(bool useThread = true)
@@ -108,11 +129,15 @@ public:
 
         // Sort the population by fitness (descending)
         std::sort(mPopulation.begin(), mPopulation.end());
-
-        // Update best individual if necessary
-        if (mPopulation[0].fitness > mBestIndividual.fitness)
+        
         {
-            mBestIndividual = mPopulation[0];
+            std::lock_guard<std::mutex> lock(mBestIndividualMtx);
+
+            // Update best individual if necessary
+            if (mPopulation[0].fitness > mBestIndividual.fitness)
+            {
+                mBestIndividual = mPopulation[0];
+            }
         }
 
         // Increment the generation counter
@@ -290,12 +315,17 @@ public:
     // Getters for training status
     size_t GetCurrentGeneration() const { return mCurrentGeneration; }
     size_t GetMaxGenerations() const { return mMaxGenerations; }
-    double GetBestScore() const { return mBestIndividual.fitness; }
+    double GetBestScore() {
+        std::lock_guard<std::mutex> lock(mBestIndividualMtx);
+        return mBestIndividual.fitness;
+    }
     size_t GetPopulationSize() const { return mPopulationSize; }
     bool IsTrainingComplete() const { return mCurrentGeneration >= mMaxGenerations; }
     // Get the best network object found so far
-    const NeuralNet& GetBestIndividualNetwork() const { return mBestIndividual.network; }
-    const std::vector<Individual>& GetPopulation() const { return mPopulation; }
+    NeuralNet GetBestIndividualNetwork() {
+        std::lock_guard<std::mutex> lock(mBestIndividualMtx);
+        return mBestIndividual.network;
+    }
 };
 
 #endif
